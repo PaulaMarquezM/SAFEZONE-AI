@@ -4,17 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Dangerous
-import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.safezoneai.data.ZoneRepository
 import com.example.safezoneai.ui.theme.*
@@ -22,9 +25,7 @@ import com.example.safezoneai.viewmodel.EmergencyViewModel
 import kotlin.math.roundToInt
 
 /**
- * Pantalla del mapa que muestra zonas peligrosas.
- * En una versión completa integraría Google Maps.
- * Por ahora muestra una lista de zonas con información.
+ * MapScreen - Pantalla de visualización de zonas de seguridad
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,50 +40,90 @@ fun MapScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mapa de Zonas", fontWeight = FontWeight.Bold) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Map,
+                            null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Mapa de Zonas",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Volver")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    containerColor = SafeGreen,
+                    titleContentColor = PureWhite,
+                    navigationIconContentColor = PureWhite
                 )
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            SafeGreenLight.copy(alpha = 0.3f),
+                            PureWhite
+                        )
+                    )
+                )
                 .padding(padding)
         ) {
-            // Ubicación actual
-            CurrentLocationCard(
-                currentLocation = currentLocation,
-                currentDangerZone = currentDangerZone
-            )
-
-            // Lista de zonas peligrosas
-            Text(
-                text = "Zonas Peligrosas Registradas",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                items(dangerousZones) { zone ->
-                    DangerZoneCard(
-                        zone = zone,
-                        currentLocation = currentLocation,
-                        isCurrentZone = zone == currentDangerZone
+                CurrentLocationCard(
+                    currentLocation = currentLocation,
+                    currentDangerZone = currentDangerZone
+                )
+
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Dangerous,
+                        null,
+                        tint = DangerRed,
+                        modifier = Modifier.size(24.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Zonas Peligrosas Registradas",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(dangerousZones) { zone ->
+                        DangerZoneCard(
+                            zone = zone,
+                            currentLocation = currentLocation,
+                            isCurrentZone = zone == currentDangerZone
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
                 }
             }
         }
@@ -94,57 +135,86 @@ fun CurrentLocationCard(
     currentLocation: android.location.Location?,
     currentDangerZone: ZoneRepository.DangerousZone?
 ) {
+    val isSafe = currentDangerZone == null
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(20.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = if (isSafe) SafeGreen else DangerRed
+            ),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (currentDangerZone != null)
-                DangerRed.copy(alpha = 0.1f)
+            containerColor = if (isSafe)
+                SafeGreenLight.copy(alpha = 0.3f)
             else
-                SafeGreen.copy(alpha = 0.1f)
+                Color(0xFFFFE5E5)
         )
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = if (currentDangerZone != null) DangerRed else SafeGreen
-            )
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        color = if (isSafe) SafeGreen.copy(alpha = 0.15f) else DangerRed.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = if (isSafe) SafeGreen else DangerRed
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Tu Ubicación Actual",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 if (currentLocation != null) {
                     Text(
                         text = "${String.format("%.5f", currentLocation.latitude)}, ${String.format("%.5f", currentLocation.longitude)}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = TextSecondary
                     )
 
-                    Text(
-                        text = if (currentDangerZone != null)
-                            "⚠️ En zona peligrosa: ${currentDangerZone.name}"
-                        else
-                            "✓ En zona segura",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = if (currentDangerZone != null) DangerRed else SafeGreen
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Surface(
+                        color = if (isSafe) SafeGreen.copy(alpha = 0.2f) else DangerRed.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = if (isSafe) "✓ Zona segura" else "⚠️ ${currentDangerZone?.name}",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isSafe) SafeGreen else DangerRed
+                        )
+                    }
                 } else {
                     Text(
                         text = "Obteniendo ubicación...",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
                     )
                 }
             }
@@ -166,55 +236,85 @@ fun DangerZoneCard(
         it.distanceTo(zoneLoc)
     }
 
+    val dangerColor = when (zone.dangerLevel) {
+        ZoneRepository.DangerLevel.CRITICAL -> DangerRed
+        ZoneRepository.DangerLevel.HIGH -> WarningOrange
+        ZoneRepository.DangerLevel.MEDIUM -> WarningBrown
+        ZoneRepository.DangerLevel.LOW -> BeigeLight
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isCurrentZone) 12.dp else 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = dangerColor
+            ),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = when {
-                isCurrentZone -> DangerRed.copy(alpha = 0.2f)
-                zone.dangerLevel == ZoneRepository.DangerLevel.CRITICAL -> DangerRed.copy(alpha = 0.1f)
-                zone.dangerLevel == ZoneRepository.DangerLevel.HIGH -> WarningOrange.copy(alpha = 0.1f)
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
+            containerColor = if (isCurrentZone)
+                dangerColor.copy(alpha = 0.15f)
+            else
+                PureWhite
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Dangerous,
-                    contentDescription = null,
-                    tint = getDangerColor(zone.dangerLevel),
-                    modifier = Modifier.size(32.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(
+                            color = dangerColor.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(14.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Dangerous,
+                        contentDescription = null,
+                        tint = dangerColor,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) {
                     Text(
                         text = zone.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DangerLevelBadge(zone.dangerLevel)
+                        DangerLevelBadge(zone.dangerLevel, dangerColor)
 
                         if (isCurrentZone) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 color = DangerRed,
-                                shape = MaterialTheme.shapes.small
+                                shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    text = "Ubicación actual",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    text = "📍 Ubicación actual",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
+                                    color = PureWhite,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -222,80 +322,140 @@ fun DangerZoneCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            Surface(
+                color = SafeGreenLight.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                InfoChip(
-                    label = "Coordenadas",
-                    value = "${String.format("%.4f", zone.latitude)}, ${String.format("%.4f", zone.longitude)}"
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    InfoChip(
+                        icon = Icons.Default.LocationOn,
+                        label = "Coordenadas",
+                        value = "${String.format("%.4f", zone.latitude)}\n${String.format("%.4f", zone.longitude)}",
+                        color = SafeGreen
+                    )
 
-                InfoChip(
-                    label = "Radio",
-                    value = "${zone.radiusMeters.roundToInt()}m"
-                )
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    InfoChip(
+                        icon = Icons.Default.RadioButtonUnchecked,
+                        label = "Radio",
+                        value = "${zone.radiusMeters.roundToInt()}m",
+                        color = WarningBrown
+                    )
+                }
             }
 
             if (distance != null && !isCurrentZone) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "📍 A ${(distance / 1000).let { if (it < 1) "${distance.roundToInt()}m" else "${String.format("%.1f", it)}km" }} de tu ubicación",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    color = SafeGreen.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            null,
+                            tint = SafeGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "A ${formatDistance(distance)} de tu ubicación",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun DangerLevelBadge(level: ZoneRepository.DangerLevel) {
-    val (text, color) = when (level) {
-        ZoneRepository.DangerLevel.LOW -> "Precaución" to AlertYellow
-        ZoneRepository.DangerLevel.MEDIUM -> "Alerta" to WarningOrange
-        ZoneRepository.DangerLevel.HIGH -> "Peligro" to DangerRed
-        ZoneRepository.DangerLevel.CRITICAL -> "Crítico" to DangerRed
+fun DangerLevelBadge(level: ZoneRepository.DangerLevel, color: Color) {
+    val (emoji, text) = when (level) {
+        ZoneRepository.DangerLevel.LOW -> "⚠️" to "Precaución"
+        ZoneRepository.DangerLevel.MEDIUM -> "⚠️" to "Alerta"
+        ZoneRepository.DangerLevel.HIGH -> "🚨" to "Peligro"
+        ZoneRepository.DangerLevel.CRITICAL -> "🚨" to "CRÍTICO"
     }
 
     Surface(
         color = color.copy(alpha = 0.2f),
-        shape = MaterialTheme.shapes.small,
-        border = androidx.compose.foundation.BorderStroke(1.dp, color)
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(2.dp, color)
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = emoji,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
 @Composable
-fun InfoChip(label: String, value: String) {
-    Column {
+fun InfoChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = color,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            color = TextSecondary,
+            fontWeight = FontWeight.Medium
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Bold,
+            color = TextDark,
+            textAlign = TextAlign.Center
         )
     }
 }
 
-fun getDangerColor(level: ZoneRepository.DangerLevel): Color {
-    return when (level) {
-        ZoneRepository.DangerLevel.LOW -> AlertYellow
-        ZoneRepository.DangerLevel.MEDIUM -> WarningOrange
-        ZoneRepository.DangerLevel.HIGH -> DangerRed
-        ZoneRepository.DangerLevel.CRITICAL -> DangerRed
+fun formatDistance(meters: Float): String {
+    return if (meters < 1000) {
+        "${meters.roundToInt()}m"
+    } else {
+        "${String.format("%.1f", meters / 1000)}km"
     }
 }
