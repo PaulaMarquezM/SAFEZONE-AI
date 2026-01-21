@@ -1,101 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-═══════════════════════════════════════════════════════════
-FILE_PATHS.XML - Configuración de FileProvider
-═══════════════════════════════════════════════════════════
-
-Este archivo define las rutas de archivos que pueden ser compartidos
-de forma segura con otras aplicaciones usando FileProvider.
-
-UBICACIÓN: res/xml/file_paths.xml
-
-USO:
-- Compartir archivos de audio de emergencia
-- Adjuntar evidencia a mensajes
-- Exportar datos de forma segura
-
-PATRÓN DE SEGURIDAD:
-FileProvider evita exponer rutas de archivo directas (file://)
-y usa content:// URIs seguros.
-═══════════════════════════════════════════════════════════
+    Rutas de archivos para FileProvider
+    Permite compartir archivos de la app con otras aplicaciones de forma segura
+    (Ejemplo: compartir audio de emergencia con WhatsApp, email, etc.)
 -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
-    ═══════════════════════════════════════════════════════════
-    FILES-PATH: Archivos internos de la app
-    ═══════════════════════════════════════════════════════════
-    Equivale a: context.getFilesDir()
-    Ruta típica: /data/data/com.example.safezoneai/files/
-    -->
+    <!-- Archivos internos de la app -->
     <files-path
-        name="emergency_files"
+        name="internal_files"
         path="." />
 
-    <!--
-    ═══════════════════════════════════════════════════════════
-    CACHE-PATH: Archivos temporales en caché
-    ═══════════════════════════════════════════════════════════
-    Equivale a: context.getCacheDir()
-    Ruta típica: /data/data/com.example.safezoneai/cache/
-    -->
-    <cache-path
-        name="emergency_cache"
-        path="." />
-
-    <!--
-    ═══════════════════════════════════════════════════════════
-    EXTERNAL-FILES-PATH: Almacenamiento externo (si aplica)
-    ═══════════════════════════════════════════════════════════
-    Equivale a: context.getExternalFilesDir(null)
-    Ruta típica: /storage/emulated/0/Android/data/com.example.safezoneai/files/
-    -->
-    <external-files-path
-        name="external_emergency_files"
+    <!-- Carpeta específica de audios de emergencia -->
+    <files-path
+        name="emergency_audios"
         path="emergency_audios/" />
 
-    <!--
-    ═══════════════════════════════════════════════════════════
-    EXTERNAL-CACHE-PATH: Caché externo (si aplica)
-    ═══════════════════════════════════════════════════════════
-    Equivale a: context.getExternalCacheDir()
-    Ruta típica: /storage/emulated/0/Android/data/com.example.safezoneai/cache/
-    -->
+    <!-- Caché temporal -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Almacenamiento externo (si se usa) -->
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- Caché externo -->
     <external-cache-path
-        name="external_emergency_cache"
+        name="external_cache"
         path="." />
 
 </paths>
-
-    <!--
-    ═══════════════════════════════════════════════════════════
-    EJEMPLO DE USO EN CÓDIGO:
-    ═══════════════════════════════════════════════════════════
-
-    // Obtener URI seguro para un archivo
-    val file = File(context.filesDir, "emergency_audios/audio_123.m4a")
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        file
-    )
-
-    // Compartir el archivo
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "audio/m4a"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    startActivity(Intent.createChooser(shareIntent, "Compartir audio"))
-
-    ═══════════════════════════════════════════════════════════
-    NOTAS DE SEGURIDAD:
-    ═══════════════════════════════════════════════════════════
-
-    1. NUNCA uses <root-path>: Expondrías todo el sistema de archivos
-    2. Especifica paths concretos: Limita el acceso solo a lo necesario
-    3. Usa FLAG_GRANT_READ_URI_PERMISSION: Otorga permisos temporales
-    4. Los permisos se revocan automáticamente cuando la app se cierra
-
-    ═══════════════════════════════════════════════════════════
-    -->

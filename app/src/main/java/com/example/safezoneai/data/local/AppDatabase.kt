@@ -8,15 +8,21 @@ import androidx.room.RoomDatabase
 /**
  * Base de datos Room de la aplicación (Singleton).
  * Gestiona la persistencia local de datos.
+ *
+ * ✅ ACTUALIZADO: Ahora incluye EmergencyRecord
  */
 @Database(
-    entities = [EmergencyContact::class],
-    version = 1,
+    entities = [
+        EmergencyContact::class,
+        EmergencyRecord::class  // ✅ NUEVA ENTIDAD
+    ],
+    version = 2,  // ✅ INCREMENTADA LA VERSIÓN
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun emergencyDao(): EmergencyDao
+    abstract fun emergencyRecordDao(): EmergencyRecordDao  // ✅ NUEVO DAO
 
     companion object {
         @Volatile
@@ -33,7 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "safezone_database"
                 )
-                    .fallbackToDestructiveMigration() // Para desarrollo, elimina datos en cambios de esquema
+                    .fallbackToDestructiveMigration() // Para desarrollo
                     .build()
 
                 INSTANCE = instance

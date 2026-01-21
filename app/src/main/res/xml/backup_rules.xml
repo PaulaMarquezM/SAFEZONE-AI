@@ -1,13 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Reglas de backup para Android 6 a Android 11 (API 23-30)
+    Define qué datos se respaldan automáticamente
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Incluir la base de datos de contactos -->
+    <include domain="database" path="safezone_database"/>
+
+    <!-- Incluir preferencias compartidas -->
+    <include domain="sharedpref" path="."/>
+
+    <!-- Incluir archivos internos -->
+    <include domain="file" path="."/>
+
+    <!-- EXCLUIR archivos de audio de emergencia (privacidad y tamaño) -->
+    <exclude domain="file" path="emergency_audios/"/>
+
+    <!-- EXCLUIR caché temporal -->
+    <exclude domain="file" path="cache/"/>
 </full-backup-content>

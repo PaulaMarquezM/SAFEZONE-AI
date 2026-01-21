@@ -14,12 +14,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.safezoneai.ui.AnimatedSplashScreen
+import com.example.safezoneai.ui.ContactsScreen
 import com.example.safezoneai.ui.EmergencyScreen
+import com.example.safezoneai.ui.HistoryScreen
 import com.example.safezoneai.ui.HomeScreen
 import com.example.safezoneai.ui.MapScreen
+import com.example.safezoneai.ui.SettingsScreen
 import com.example.safezoneai.ui.theme.SafeZoneAITheme
 import com.example.safezoneai.viewmodel.EmergencyViewModel
+
 
 /**
  * MainActivity - Actividad principal de SafeZone AI
@@ -33,7 +39,7 @@ import com.example.safezoneai.viewmodel.EmergencyViewModel
  * solicitar permisos y coordinar la navegación.
  *
  * ARQUITECTURA: MVVM (Model-View-ViewModel)
- * - View: Composables (HomeScreen, EmergencyScreen, MapScreen)
+ * - View: Composables (HomeScreen, EmergencyScreen, MapScreen, ContactsScreen)
  * - ViewModel: EmergencyViewModel
  * - Model: Data layer (Room Database, Repositories)
  */
@@ -55,7 +61,7 @@ class MainActivity : ComponentActivity() {
         if (allGranted) {
             Toast.makeText(
                 this,
-                "✓ Permisos concedidos correctamente",
+                "✅ Permisos concedidos correctamente",
                 Toast.LENGTH_SHORT
             ).show()
         } else {
@@ -73,6 +79,7 @@ class MainActivity : ComponentActivity() {
     // ═══════════════════════════════════════════════════════════
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         // Solicitar permisos necesarios
@@ -175,28 +182,36 @@ class MainActivity : ComponentActivity() {
  * - "home" -> HomeScreen
  * - "emergency" -> EmergencyScreen
  * - "map" -> MapScreen
+ * - "contacts" -> ContactsScreen ✅ NUEVO
  *
  * NOTA: En una aplicación más grande, se recomienda usar
  * Navigation Compose o Voyager para navegación más robusta.
  */
+// ✅ REEMPLAZAR SafeZoneApp() COMPLETO EN MainActivity.kt
+
 @Composable
 fun SafeZoneApp() {
-    // Estado de navegación
-    // PATRÓN: State Management
-    var currentScreen by remember { mutableStateOf("home") }
 
-    // ViewModel compartido entre pantallas
-    // PRINCIPIO SOLID: Dependency Inversion Principle (DIP)
-    // Las vistas dependen de la abstracción (ViewModel) no de implementaciones concretas
+    var currentScreen by remember { mutableStateOf("splash") }
+
     val viewModel: EmergencyViewModel = viewModel()
 
-    // Sistema de navegación basado en estado
     when (currentScreen) {
+
+        "splash" -> {
+            AnimatedSplashScreen(
+                onFinished = { currentScreen = "home" }
+            )
+        }
+
         "home" -> {
             HomeScreen(
                 viewModel = viewModel,
                 onNavigateToMap = { currentScreen = "map" },
-                onNavigateToEmergency = { currentScreen = "emergency" }
+                onNavigateToEmergency = { currentScreen = "emergency" },
+                onNavigateToContacts = { currentScreen = "contacts" },
+                onNavigateToSettings = { currentScreen = "settings" },
+                onNavigateToHistory = { currentScreen = "history" }
             )
         }
 
@@ -210,6 +225,25 @@ fun SafeZoneApp() {
         "map" -> {
             MapScreen(
                 viewModel = viewModel,
+                onBack = { currentScreen = "home" }
+            )
+        }
+
+        "contacts" -> {
+            ContactsScreen(
+                viewModel = viewModel,
+                onBack = { currentScreen = "home" }
+            )
+        }
+
+        "settings" -> {
+            SettingsScreen(
+                onBack = { currentScreen = "home" }
+            )
+        }
+
+        "history" -> {
+            HistoryScreen(
                 onBack = { currentScreen = "home" }
             )
         }

@@ -1,5 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.SafeZoneAI" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+        ═══════════════════════════════════════════════════════
+        TEMA PRINCIPAL DE SAFEZONE AI
+        Basado en Theme.MaterialComponents (ya incluido)
+        ═══════════════════════════════════════════════════════
+    -->
+
+    <style name="Theme.SafeZoneAI" parent="Theme.MaterialComponents.Light.NoActionBar">
+
+        <!-- Colores primarios -->
+        <item name="colorPrimary">@color/safe_green</item>
+        <item name="colorPrimaryVariant">@color/safe_green</item>
+        <item name="colorOnPrimary">@color/pure_white</item>
+
+        <!-- Colores secundarios -->
+        <item name="colorSecondary">@color/warning_brown</item>
+        <item name="colorSecondaryVariant">@color/warning_brown</item>
+        <item name="colorOnSecondary">@color/pure_white</item>
+
+        <!-- Colores de fondo -->
+        <item name="android:colorBackground">@color/pure_white</item>
+        <item name="colorSurface">@color/pure_white</item>
+        <item name="colorOnBackground">@color/text_dark</item>
+        <item name="colorOnSurface">@color/text_dark</item>
+
+        <!-- Colores de error -->
+        <item name="colorError">@color/danger_red</item>
+        <item name="colorOnError">@color/pure_white</item>
+
+        <!-- Barra de estado -->
+        <item name="android:statusBarColor">@color/safe_green</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Barra de navegación -->
+        <item name="android:navigationBarColor">@color/pure_white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+
+    </style>
+
 </resources>

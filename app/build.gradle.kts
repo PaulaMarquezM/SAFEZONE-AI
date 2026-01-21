@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.safezoneai"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.safezoneai"
@@ -77,7 +77,11 @@ dependencies {
     // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    implementation(libs.androidx.core.splashscreen)
     kapt("androidx.room:room-compiler:2.6.1")
+
+    implementation("com.google.android.material:material:1.11.0")
+
 
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.1.0")

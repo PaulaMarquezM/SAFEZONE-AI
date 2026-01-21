@@ -1,3 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SafeZoneAI</string>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- NOMBRE DE LA APLICACIÓN -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="app_name">SafeZone AI</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PANTALLA PRINCIPAL (HOME) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="home_title">SafeZone AI</string>
+    <string name="home_safe_zone">✅ ZONA SEGURA</string>
+    <string name="home_danger_zone">⚠️ ZONA PELIGROSA</string>
+    <string name="home_safe_message">Te encuentras en un área segura.\nDisfruta tu día con tranquilidad.</string>
+    <string name="home_emergency_button">EMERGENCIA</string>
+    <string name="home_emergency_active">DETENER</string>
+    <string name="home_emergency_hint">Presiona en caso de emergencia</string>
+    <string name="home_emergency_recording">🔴 Emergencia activa - Grabando audio</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PANTALLA DE EMERGENCIA -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="emergency_title">🚨 EMERGENCIA ACTIVA</string>
+    <string name="emergency_activated">Emergencia Activada</string>
+    <string name="emergency_stop_button">DETENER EMERGENCIA</string>
+    <string name="emergency_status_title">Estado de la Emergencia</string>
+    <string name="emergency_recording">Grabación de Audio</string>
+    <string name="emergency_recording_active">🔴 Grabando…</string>
+    <string name="emergency_recording_finished">✅ Finalizada</string>
+    <string name="emergency_location">Ubicación GPS</string>
+    <string name="emergency_location_getting">Obteniendo…</string>
+    <string name="emergency_contacts_notified">Contactos Notificados</string>
+    <string name="emergency_contacts_count">%d contacto(s)</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PANTALLA DE MAPA -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="map_title">Mapa de Zonas</string>
+    <string name="map_your_location">Tu Ubicación Actual</string>
+    <string name="map_safe_zone">✅ Zona segura</string>
+    <string name="map_dangerous_zones">Zonas Monitoreadas (%d)</string>
+    <string name="map_loading">Cargando zonas…</string>
+    <string name="map_no_zones">No se detectaron zonas</string>
+    <string name="map_verify_gps">Verifica que el GPS esté activado</string>
+    <string name="map_distance">A %s de tu ubicación</string>
+    <string name="map_you_are_here">📍 Estás aquí</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PANTALLA DE CONTACTOS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="contacts_title">Contactos de Emergencia</string>
+    <string name="contacts_empty">No tienes contactos de emergencia</string>
+    <string name="contacts_empty_message">Agrega al menos un contacto para recibir alertas en caso de emergencia.</string>
+    <string name="contacts_add">Agregar Contacto</string>
+    <string name="contacts_edit">Editar Contacto</string>
+    <string name="contacts_delete">Eliminar Contacto</string>
+    <string name="contacts_delete_confirm">¿Seguro que deseas eliminar este contacto?</string>
+    <string name="contacts_name">Nombre completo</string>
+    <string name="contacts_phone">Número telefónico</string>
+    <string name="contacts_phone_hint">+593 999 999 999</string>
+    <string name="contacts_relationship">Relación</string>
+    <string name="contacts_relationship_family">Familiar</string>
+    <string name="contacts_relationship_friend">Amigo/a</string>
+    <string name="contacts_relationship_police">Policía</string>
+    <string name="contacts_relationship_other">Otro</string>
+    <string name="contacts_primary">Contacto principal</string>
+    <string name="contacts_primary_hint">Se notifica primero</string>
+    <string name="contacts_save">Guardar</string>
+    <string name="contacts_cancel">Cancelar</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- MENSAJES DE ERROR Y VALIDACIÓN -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="error_empty_name">El nombre no puede estar vacío</string>
+    <string name="error_empty_phone">El número telefónico no puede estar vacío</string>
+    <string name="error_invalid_phone">Número telefónico inválido</string>
+    <string name="error_permission_denied">Permiso denegado</string>
+    <string name="error_location_unavailable">No se pudo obtener la ubicación</string>
+    <string name="error_recording_failed">Error al grabar audio</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- NOTIFICACIONES -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="notification_emergency_title">🚨 Emergencia Activada</string>
+    <string name="notification_emergency_text">Se ha activado el botón de emergencia. Ubicación registrada.</string>
+    <string name="notification_zone_title">⚠️ Zona Peligrosa Detectada</string>
+    <string name="notification_zone_text">Has entrado a: %s</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PERMISOS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="permission_location_rationale">SafeZone AI necesita acceso a tu ubicación para detectar zonas peligrosas y enviar alertas con tu posición exacta.</string>
+    <string name="permission_audio_rationale">El permiso de audio permite grabar evidencia durante una emergencia.</string>
+    <string name="permission_sms_rationale">El permiso de SMS permite enviar alertas a tus contactos de emergencia.</string>
+    <string name="permission_notification_rationale">Las notificaciones te alertarán cuando entres en zonas peligrosas.</string>
+    <string name="permission_granted">✅ Permisos concedidos correctamente</string>
+    <string name="permission_denied">⚠️ Algunos permisos fueron denegados</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- MENSAJES GENERALES -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="loading">Cargando…</string>
+    <string name="yes">Sí</string>
+    <string name="no">No</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="edit">Editar</string>
+    <string name="save">Guardar</string>
+    <string name="back">Volver</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- INFORMACIÓN DE LA APP -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="info_what_does_button">¿Qué hace el botón de emergencia?</string>
+    <string name="info_records_location">📍 Registra tu ubicación GPS en tiempo real</string>
+    <string name="info_records_audio">🎙️ Graba audio automáticamente para evidencia</string>
+    <string name="info_alerts_contacts">📱 Alerta a tus contactos de emergencia por SMS</string>
+    <string name="info_vibrates">📳 Vibra para confirmar la activación</string>
+    <string name="info_saves_data">📊 Guarda toda la información localmente</string>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- MENSAJE SMS DE EMERGENCIA -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <string name="sms_emergency_title">🚨 ALERTA DE EMERGENCIA - SafeZone AI</string>
+    <string name="sms_emergency_body">He activado el botón de emergencia.\n\n📍 Mi ubicación:\n%s\n\nCoordenadas: %f, %f\n\nPor favor, verifica mi seguridad.</string>
+
 </resources>

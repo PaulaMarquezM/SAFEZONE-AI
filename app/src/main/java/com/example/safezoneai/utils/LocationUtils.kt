@@ -50,6 +50,7 @@ class LocationUtils(private val context: Context) {
         if (!hasLocationPermission()) return null
 
         return try {
+            @Suppress("MissingPermission")
             fusedLocationClient.lastLocation.await()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -85,6 +86,7 @@ class LocationUtils(private val context: Context) {
         }
 
         try {
+            @Suppress("MissingPermission")
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
@@ -118,6 +120,7 @@ class LocationUtils(private val context: Context) {
                 .setMaxUpdateAgeMillis(5_000)
                 .build()
 
+            @Suppress("MissingPermission")
             fusedLocationClient.getCurrentLocation(request, null).await()
         } catch (e: Exception) {
             e.printStackTrace()

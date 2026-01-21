@@ -1,99 +1,64 @@
 package com.example.safezoneai.viewmodel
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Application
 import android.location.Location
-import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.safezoneai.data.ZoneRepository
+import com.example.safezoneai.data.SmartZoneDetector
 import com.example.safezoneai.data.local.AppDatabase
 import com.example.safezoneai.data.local.EmergencyContact
+import com.example.safezoneai.data.local.EmergencyRecord
 import com.example.safezoneai.utils.AudioRecorder
 import com.example.safezoneai.utils.LocationUtils
 import com.example.safezoneai.utils.NotificationUtils
+import com.example.safezoneai.utils.WhatsAppUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
- * EmergencyViewModel - ViewModel principal de SafeZone AI
- *
- * PRINCIPIOS SOLID APLICADOS:
- *
- * 1. SRP (Single Responsibility Principle):
- *    - Única responsabilidad: Gestionar el estado de emergencia y coordinar servicios
- *
- * 2. OCP (Open/Closed Principle):
- *    - Abierto para extensión (nuevos tipos de emergencias)
- *    - Cerrado para modificación (no necesitas modificar el código existente)
- *
- * 3. LSP (Liskov Substitution Principle):
- *    - Hereda de AndroidViewModel correctamente
- *
- * 4. ISP (Interface Segregation Principle):
- *    - Usa interfaces específicas para cada servicio (LocationUtils, AudioRecorder, etc.)
- *
- * 5. DIP (Dependency Inversion Principle):
- *    - Depende de abstracciones (interfaces) no de implementaciones concretas
- *
- * PATRONES DE DISEÑO APLICADOS:
- *
- * - OBSERVER PATTERN: Los estados (StateFlow) notifican automáticamente a los observadores
- * - REPOSITORY PATTERN: ZoneRepository abstrae el acceso a datos de zonas
- * - SINGLETON PATTERN: AppDatabase.getDatabase() garantiza una única instancia
- * - FACADE PATTERN: Este ViewModel actúa como fachada simplificando servicios complejos
- * - STRATEGY PATTERN: Diferentes estrategias de emergencia según el contexto
+ * 🧠 ViewModel con sistema INTELIGENTE de detección de zonas
+ * ✅ VERSIÓN FINAL: SMS automático después de 30 segundos
  */
 class EmergencyViewModel(application: Application) : AndroidViewModel(application) {
-
-    // ═══════════════════════════════════════════════════════════
-    // DEPENDENCIAS - Principio DIP (Dependency Inversion)
-    // ═══════════════════════════════════════════════════════════
 
     private val context = application.applicationContext
     private val locationUtils = LocationUtils(context)
     private val audioRecorder = AudioRecorder(context)
     private val notificationUtils = NotificationUtils(context)
-    private val zoneRepository = ZoneRepository()
 
-    // SINGLETON: Base de datos única
+    // 🌍 NUEVO: Detector inteligente de zonas
+    private val smartZoneDetector = SmartZoneDetector(context)
+
     private val database = AppDatabase.getDatabase(context)
     private val emergencyDao = database.emergencyDao()
 
     // ═══════════════════════════════════════════════════════════
-    // ESTADOS REACTIVOS - OBSERVER PATTERN
+    // ESTADOS REACTIVOS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Estado de emergencia activa
-     * Los observadores son notificados automáticamente cuando cambia
-     */
     private val _isEmergencyActive = MutableStateFlow(false)
     val isEmergencyActive: StateFlow<Boolean> = _isEmergencyActive.asStateFlow()
 
-    /**
-     * Estado de grabación de audio
-     */
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
-    /**
-     * Ubicación actual del usuario
-     * Se actualiza cada 5 segundos
-     */
     private val _currentLocation = MutableStateFlow<Location?>(null)
     val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
 
-    /**
-     * Zona peligrosa actual (si el usuario está en una)
-     */
-    private val _currentDangerZone = MutableStateFlow<ZoneRepository.DangerousZone?>(null)
-    val currentDangerZone: StateFlow<ZoneRepository.DangerousZone?> = _currentDangerZone.asStateFlow()
+    private val _currentDangerZone = MutableStateFlow<SmartZoneDetector.DangerousZone?>(null)
+    val currentDangerZone: StateFlow<SmartZoneDetector.DangerousZone?> =
+        _currentDangerZone.asStateFlow()
 
-    /**
-     * Lista de contactos de emergencia
-     * OBSERVER: Automáticamente sincronizado con Room Database
-     */
+    // 🆕 Ciudad detectada
+    private val _detectedCity = MutableStateFlow<SmartZoneDetector.DetectedCity?>(null)
+    val detectedCity: StateFlow<SmartZoneDetector.DetectedCity?> = _detectedCity.asStateFlow()
+
+    // 🆕 Estado de carga
+    private val _isLoadingZones = MutableStateFlow(false)
+    val isLoadingZones: StateFlow<Boolean> = _isLoadingZones.asStateFlow()
+
     val emergencyContacts: StateFlow<List<EmergencyContact>> = emergencyDao
         .getAllContacts()
         .stateIn(
@@ -108,42 +73,103 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         startLocationTracking()
-        observeLocationForDangerZones()
+        observeLocationForSmartDetection()
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONALIDAD PRINCIPAL: GESTIÓN DE EMERGENCIAS
+    // 🌍 NUEVA FUNCIONALIDAD: DETECCIÓN INTELIGENTE
+    // ═══════════════════════════════════════════════════════════
+
+    private fun observeLocationForSmartDetection() {
+        viewModelScope.launch {
+            _currentLocation
+                .filterNotNull()
+                .distinctUntilChanged { old, new ->
+                    val oldLoc = Location("").apply {
+                        latitude = old.latitude
+                        longitude = old.longitude
+                    }
+                    val newLoc = Location("").apply {
+                        latitude = new.latitude
+                        longitude = new.longitude
+                    }
+                    oldLoc.distanceTo(newLoc) < 500
+                }
+                .collect { location ->
+                    detectCityAndLoadZones(location.latitude, location.longitude)
+                }
+        }
+    }
+
+    private suspend fun detectCityAndLoadZones(latitude: Double, longitude: Double) {
+        _isLoadingZones.value = true
+
+        try {
+            val detectedCity = smartZoneDetector.detectAndLoadDangerousZones(latitude, longitude)
+
+            if (detectedCity != null) {
+                _detectedCity.value = detectedCity
+
+                val currentZone = smartZoneDetector.checkCurrentZone(
+                    userLat = latitude,
+                    userLon = longitude,
+                    zones = detectedCity.dangerousZones
+                )
+
+                if (currentZone != null &&
+                    currentZone.dangerLevel != SmartZoneDetector.DangerLevel.SAFE &&
+                    _currentDangerZone.value != currentZone
+                ) {
+
+                    notificationUtils.showDangerZoneAlert(
+                        zoneName = currentZone.name,
+                        dangerLevel = currentZone.dangerLevel.name
+                    )
+                    notificationUtils.vibrateEmergency()
+                }
+
+                _currentDangerZone.value = currentZone
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            _isLoadingZones.value = false
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 🚨 FUNCIONALIDAD PRINCIPAL: EMERGENCIAS
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Activa el modo de emergencia
+     * 🚨 ACTIVAR EMERGENCIA - VERSIÓN FINAL
      *
-     * STRATEGY PATTERN: Ejecuta una estrategia de emergencia completa
-     *
-     * Acciones:
-     * 1. Obtener ubicación GPS
-     * 2. Iniciar grabación de audio
-     * 3. Vibrar dispositivo
-     * 4. Enviar notificaciones
-     * 5. Enviar SMS a contactos
+     * FLUJO COMPLETO:
+     * 1. Obtiene ubicación GPS
+     * 2. Inicia grabación de audio (30 segundos)
+     * 3. Vibra y muestra notificación
+     * 4. ESPERA 30 SEGUNDOS
+     * 5. Detiene grabación
+     * 6. ✅ ENVÍA SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
+     * 7. Guarda en historial
      */
     fun activateEmergency() {
-        if (_isEmergencyActive.value) return // Evitar activación múltiple
+        if (_isEmergencyActive.value) return
 
         viewModelScope.launch {
             try {
                 _isEmergencyActive.value = true
 
-                // 1. Obtener ubicación GPS
+                // 1️⃣ Obtener ubicación GPS
                 val location = getCurrentLocation()
 
-                // 2. Iniciar grabación de audio
+                // 2️⃣ Iniciar grabación de audio
                 startAudioRecording()
 
-                // 3. Vibrar dispositivo
+                // 3️⃣ Vibrar
                 notificationUtils.vibrateEmergency()
 
-                // 4. Mostrar notificación
+                // 4️⃣ Mostrar notificación inicial
                 location?.let {
                     notificationUtils.showEmergencyNotification(
                         latitude = it.latitude,
@@ -151,8 +177,24 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
 
-                // 5. Enviar SMS a contactos de emergencia
-                sendEmergencySMS(location)
+                // 5️⃣ ⏱️ ESPERAR 30 SEGUNDOS (mientras graba)
+                delay(30_000)
+
+                // 6️⃣ Detener grabación
+                val audioFile = stopAudioRecording()
+
+                // 7️⃣ ✅ ENVIAR SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
+                location?.let { loc ->
+                    sendEmergencySMSToAll(
+                        latitude = loc.latitude,
+                        longitude = loc.longitude,
+                        audioFilePath = audioFile?.absolutePath
+                    )
+                }
+
+                // 8️⃣ Guardar en historial
+                val contactsCount = emergencyDao.getAllContacts().first().size
+                saveEmergencyToHistory(location, audioFile?.absolutePath, contactsCount)
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -161,24 +203,12 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Desactiva el modo de emergencia
-     *
-     * Acciones:
-     * 1. Detener grabación de audio
-     * 2. Guardar datos de la emergencia
-     * 3. Limpiar estados
-     */
     fun deactivateEmergency() {
         viewModelScope.launch {
             try {
-                // Detener grabación
                 stopAudioRecording()
-
-                // Limpiar estados
                 _isEmergencyActive.value = false
                 _isRecording.value = false
-
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -186,23 +216,16 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONALIDAD: UBICACIÓN GPS
+    // 📍 UBICACIÓN GPS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Inicia el seguimiento de ubicación en tiempo real
-     *
-     * OBSERVER PATTERN: El Flow de ubicación notifica cambios automáticamente
-     */
     private fun startLocationTracking() {
         if (!locationUtils.hasLocationPermission()) return
 
         viewModelScope.launch {
             try {
                 locationUtils.getLocationUpdates(intervalMillis = 5000)
-                    .catch { e ->
-                        e.printStackTrace()
-                    }
+                    .catch { e -> e.printStackTrace() }
                     .collect { location ->
                         _currentLocation.value = location
                     }
@@ -212,10 +235,7 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Obtiene la ubicación actual de forma síncrona
-     */
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    @SuppressLint("MissingPermission")
     private suspend fun getCurrentLocation(): Location? {
         return try {
             if (!locationUtils.hasLocationPermission()) return null
@@ -226,44 +246,10 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Observa la ubicación para detectar zonas peligrosas
-     *
-     * OBSERVER + STRATEGY: Detecta automáticamente y aplica estrategia de alerta
-     */
-    private fun observeLocationForDangerZones() {
-        viewModelScope.launch {
-            _currentLocation.collect { location ->
-                if (location != null) {
-                    val dangerZone = zoneRepository.checkDangerousZone(
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                    )
-
-                    // Si entró a una zona peligrosa, alertar
-                    if (dangerZone != null && _currentDangerZone.value != dangerZone) {
-                        notificationUtils.showDangerZoneAlert(
-                            zoneName = dangerZone.name,
-                            dangerLevel = dangerZone.dangerLevel.name
-                        )
-                        notificationUtils.vibrateEmergency()
-                    }
-
-                    _currentDangerZone.value = dangerZone
-                }
-            }
-        }
-    }
-
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONALIDAD: GRABACIÓN DE AUDIO
+    // 🎙️ GRABACIÓN DE AUDIO
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Inicia la grabación de audio
-     *
-     * SRP: AudioRecorder se encarga de la grabación
-     */
     private fun startAudioRecording() {
         if (!audioRecorder.hasAudioPermission()) return
 
@@ -279,52 +265,55 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Detiene la grabación de audio
-     */
-    private fun stopAudioRecording() {
-        viewModelScope.launch {
-            try {
-                audioRecorder.stopRecording()
-                _isRecording.value = false
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    private fun stopAudioRecording(): java.io.File? {
+        return try {
+            val audioFile = audioRecorder.stopRecording()
+            _isRecording.value = false
+            audioFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONALIDAD: CONTACTOS DE EMERGENCIA
+    // 📱 ENVÍO DE MENSAJES - SMS AUTOMÁTICO
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Envía SMS de emergencia a todos los contactos
-     *
-     * SRP: NotificationUtils se encarga del envío
+     * 📨 ENVÍA SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
+     * Incluye: ubicación GPS + ruta del audio grabado
      */
-    private suspend fun sendEmergencySMS(location: Location?) {
-        if (location == null) return
-
+    private suspend fun sendEmergencySMSToAll(
+        latitude: Double,
+        longitude: Double,
+        audioFilePath: String?
+    ) {
         try {
-            val contacts = emergencyDao.getPrimaryContacts()
-            val audioPath = audioRecorder.getCurrentAudioFile()?.absolutePath
+            // Obtener TODOS los contactos
+            val contacts = emergencyDao.getAllContacts().first()
 
+            if (contacts.isEmpty()) {
+                return
+            }
+
+            // Enviar SMS a cada contacto
             notificationUtils.sendEmergencySMS(
                 contacts = contacts,
-                latitude = location.latitude,
-                longitude = location.longitude,
-                audioFilePath = audioPath
+                latitude = latitude,
+                longitude = longitude,
+                audioFilePath = audioFilePath
             )
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    /**
-     * Añade un nuevo contacto de emergencia
-     *
-     * REPOSITORY PATTERN: Abstrae el acceso a la base de datos
-     */
+    // ═══════════════════════════════════════════════════════════
+    // 📞 CONTACTOS DE EMERGENCIA - CRUD
+    // ═══════════════════════════════════════════════════════════
+
     fun addEmergencyContact(contact: EmergencyContact) {
         viewModelScope.launch {
             try {
@@ -335,9 +324,16 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /**
-     * Elimina un contacto de emergencia
-     */
+    fun updateEmergencyContact(contact: EmergencyContact) {
+        viewModelScope.launch {
+            try {
+                emergencyDao.updateContact(contact)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun deleteEmergencyContact(contact: EmergencyContact) {
         viewModelScope.launch {
             try {
@@ -349,39 +345,70 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONALIDAD: ZONAS PELIGROSAS
+    // 🗺️ ZONAS PELIGROSAS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Obtiene todas las zonas peligrosas
-     *
-     * REPOSITORY PATTERN: ZoneRepository encapsula la lógica de zonas
-     */
-    fun getAllDangerousZones(): List<ZoneRepository.DangerousZone> {
-        return zoneRepository.getAllDangerousZones()
-    }
-
-    /**
-     * Obtiene la distancia a la zona peligrosa más cercana
-     */
-    fun getDistanceToNearestDanger(): Pair<ZoneRepository.DangerousZone, Float>? {
-        val location = _currentLocation.value ?: return null
-        return zoneRepository.getDistanceToNearestDanger(
-            latitude = location.latitude,
-            longitude = location.longitude
-        )
+    fun getAllDangerousZones(): List<SmartZoneDetector.DangerousZone> {
+        return _detectedCity.value?.dangerousZones ?: emptyList()
     }
 
     // ═══════════════════════════════════════════════════════════
-    // LIMPIEZA DE RECURSOS
+    // 💬 WHATSAPP - SOLO MANUAL (OPCIONAL)
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Limpia recursos cuando el ViewModel es destruido
+     * 💬 Comparte ubicación por WhatsApp MANUALMENTE
+     * El usuario presiona el botón y elige el contacto
      */
+    fun shareLocationViaWhatsApp(phoneNumber: String? = null) {
+        viewModelScope.launch {
+            try {
+                val location = _currentLocation.value
+                if (location != null) {
+                    val whatsAppUtils = WhatsAppUtils(context)
+                    whatsAppUtils.shareEmergencyLocation(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        phoneNumber = phoneNumber
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 📜 HISTORIAL DE EMERGENCIAS
+    // ═══════════════════════════════════════════════════════════
+
+    private suspend fun saveEmergencyToHistory(
+        location: Location?,
+        audioPath: String?,
+        contactsNotified: Int
+    ) {
+        if (location == null) return
+
+        try {
+            val record = EmergencyRecord(
+                timestamp = System.currentTimeMillis(),
+                latitude = location.latitude,
+                longitude = location.longitude,
+                audioFilePath = audioPath,
+                contactsNotified = contactsNotified,
+                dangerZoneName = _currentDangerZone.value?.name,
+                dangerLevel = _currentDangerZone.value?.dangerLevel?.name,
+                notes = null
+            )
+
+            database.emergencyRecordDao().insertRecord(record)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
-        // Asegurar que se detenga cualquier grabación activa
         if (_isRecording.value) {
             audioRecorder.stopRecording()
         }

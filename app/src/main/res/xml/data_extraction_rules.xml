@@ -1,31 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-═══════════════════════════════════════════════════════════
-DATA_EXTRACTION_RULES.XML - Reglas de Extracción de Datos
-═══════════════════════════════════════════════════════════
+    Reglas de extracción de datos para Android 12+ (API 31+)
+    Define qué datos se pueden respaldar en la nube y transferir a nuevos dispositivos
 -->
-<data-extraction-rules xmlns:tools="http://schemas.android.com/tools">
+<data-extraction-rules>
+    <!-- Backup en la nube (Google Drive) -->
     <cloud-backup>
-        <!-- Incluir base de datos -->
-        <include domain="database" path="safezone_database" />
+        <!-- Incluir base de datos de contactos -->
+        <include domain="database" path="safezone_database"/>
 
-        <!-- Incluir preferencias -->
-        <include domain="sharedpref" path="." />
-
-        <!-- Excluir archivos -->
-        <exclude domain="file" path="."
-            tools:ignore="FullBackupContent" />
+        <!-- Incluir preferencias compartidas -->
+        <include domain="sharedpref" path="."/>
     </cloud-backup>
 
+    <!-- Transferencia a nuevo dispositivo -->
     <device-transfer>
-        <!-- Incluir base de datos -->
-        <include domain="database" path="safezone_database" />
+        <!-- Incluir contactos de emergencia -->
+        <include domain="database" path="safezone_database"/>
 
-        <!-- Incluir preferencias -->
-        <include domain="sharedpref" path="." />
-
-        <!-- Excluir archivos -->
-        <exclude domain="file" path="."
-            tools:ignore="FullBackupContent" />
+        <!-- Incluir preferencias compartidas -->
+        <include domain="sharedpref" path="."/>
     </device-transfer>
 </data-extraction-rules>

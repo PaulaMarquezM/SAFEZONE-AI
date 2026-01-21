@@ -4,6 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -100,20 +102,34 @@ fun EmergencyScreen(
                 )
             },
 
-            // 🔴 FIX CLAVE DEL BUG VISUAL
+            // ✅ BOTÓN FIJO EN LA PARTE INFERIOR
             bottomBar = {
-                StopEmergencyButton {
-                    viewModel.deactivateEmergency()
-                    onBack()
+                Column {
+                    // 💬 BOTÓN DE WHATSAPP
+                    WhatsAppShareButton(
+                        latitude = currentLocation?.latitude,
+                        longitude = currentLocation?.longitude,
+                        modifier = Modifier,
+                        isCompact = false,
+                        enabled = true
+                    )
+
+                    // 🔴 BOTÓN DETENER
+                    StopEmergencyButton {
+                        viewModel.deactivateEmergency()
+                        onBack()
+                    }
                 }
             },
 
             containerColor = Color.Transparent
         ) { padding ->
+            // ✅ AGREGAR SCROLL VERTICAL
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .verticalScroll(rememberScrollState())  // ✅ ESTO ES CLAVE
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
@@ -134,44 +150,48 @@ fun EmergencyScreen(
                     contactsNotified = emergencyContacts.size
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                // ✅ ESPACIO EXTRA PARA QUE NO SE CORTE CON EL BOTTOMBAR
+                Spacer(modifier = Modifier.height(180.dp))
             }
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 @Composable
 fun EmergencyAlertIndicator(alpha: Float) {
     Box(
         modifier = Modifier
-            .size(140.dp)
+            .size(120.dp)  // Reducido para pantallas pequeñas
             .alpha(alpha)
-            .shadow(16.dp, RoundedCornerShape(70.dp), spotColor = DangerRed)
+            .shadow(16.dp, RoundedCornerShape(60.dp), spotColor = DangerRed)
             .background(
                 DangerRed.copy(alpha = 0.15f),
-                RoundedCornerShape(70.dp)
+                RoundedCornerShape(60.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             Icons.Default.Warning,
             contentDescription = null,
-            modifier = Modifier.size(80.dp),
+            modifier = Modifier.size(64.dp),
             tint = DangerRed
         )
     }
 }
 
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 @Composable
 fun EmergencyTimer(elapsedSeconds: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Text(
             "Emergencia Activada",
-            fontSize = 26.sp,
+            fontSize = 24.sp,  // Reducido
             fontWeight = FontWeight.Bold,
             color = DangerRed
         )
@@ -181,20 +201,21 @@ fun EmergencyTimer(elapsedSeconds: Int) {
         Surface(
             color = DangerRed.copy(alpha = 0.1f),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(2.dp, DangerRed.copy(alpha = 0.3f))
+            border = BorderStroke(2.dp, DangerRed.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth(0.9f)
         ) {
             Text(
                 formatTime(elapsedSeconds),
-                fontSize = 48.sp,
+                fontSize = 42.sp,  // Reducido
                 fontWeight = FontWeight.Bold,
                 color = DangerRed,
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
             )
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 @Composable
 fun EmergencyStatusCard(
@@ -209,30 +230,30 @@ fun EmergencyStatusCard(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = PureWhite)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {  // Padding reducido
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, null, tint = SafeGreen, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Info, null, tint = SafeGreen, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     "Estado de la Emergencia",
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,  // Reducido
                     color = TextDark
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             EmergencyStatusItem(
                 Icons.Default.Mic,
                 "Grabación de Audio",
-                if (isRecording) "🔴 Grabando..." else "✓ Finalizada",
+                if (isRecording) "🔴 Grabando..." else "✅ Finalizada",
                 isRecording,
                 if (isRecording) DangerRed else SafeGreen
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             EmergencyStatusItem(
                 Icons.Default.LocationOn,
@@ -244,7 +265,7 @@ fun EmergencyStatusCard(
                 if (currentLocation != null) SafeGreen else WarningBrown
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             EmergencyStatusItem(
                 Icons.Default.Notifications,
@@ -253,12 +274,11 @@ fun EmergencyStatusCard(
                 contactsNotified > 0,
                 if (contactsNotified > 0) SafeGreen else TextSecondary
             )
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 @Composable
 fun EmergencyStatusItem(
@@ -275,36 +295,43 @@ fun EmergencyStatusItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),  // Padding reducido
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(color.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                    .size(40.dp)  // Reducido
+                    .background(color.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
+                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.SemiBold, color = TextDark)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(status, color = TextSecondary)
+                Text(
+                    title,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextDark,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    status,
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
             }
 
             if (isActive) {
-                Icon(Icons.Default.CheckCircle, null, tint = SafeGreen)
+                Icon(Icons.Default.CheckCircle, null, tint = SafeGreen, modifier = Modifier.size(20.dp))
             }
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────
-// 🔴 BOTÓN FIXEADO
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 @Composable
 fun StopEmergencyButton(onClick: () -> Unit) {
@@ -312,27 +339,26 @@ fun StopEmergencyButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-            .navigationBarsPadding()
-            .height(64.dp)
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .height(56.dp)  // Reducido
             .shadow(8.dp, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Stop, null, tint = PureWhite)
-            Spacer(modifier = Modifier.width(12.dp))
+            Icon(Icons.Default.Stop, null, tint = PureWhite, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 "DETENER EMERGENCIA",
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 color = PureWhite
             )
         }
     }
 }
 
-// ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
 fun formatTime(seconds: Int): String {
     val m = seconds / 60
