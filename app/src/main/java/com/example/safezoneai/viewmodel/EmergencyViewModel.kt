@@ -2,6 +2,7 @@ package com.example.safezoneai.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,8 +19,15 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
- * 🧠 ViewModel con sistema INTELIGENTE de detección de zonas
- * ✅ VERSIÓN FINAL: SMS automático después de 30 segundos
+ * 🧠 ViewModel - VERSIÓN FINAL
+ *
+ * FLUJO NUEVO:
+ * 1. Usuario presiona emergencia
+ * 2. Se abre WhatsApp con MENSAJE
+ * 3. Usuario envía mensaje y regresa a la app
+ * 4. App graba audio mientras está en pantalla de emergencia
+ * 5. Cuando termina grabación: Se abre WhatsApp con AUDIO
+ * 6. Usuario envía audio
  */
 class EmergencyViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -28,15 +36,14 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     private val audioRecorder = AudioRecorder(context)
     private val notificationUtils = NotificationUtils(context)
 
-    // 🌍 NUEVO: Detector inteligente de zonas
     private val smartZoneDetector = SmartZoneDetector(context)
-
     private val database = AppDatabase.getDatabase(context)
     private val emergencyDao = database.emergencyDao()
+    private val prefs = context.getSharedPreferences("safezone_settings", Context.MODE_PRIVATE)
 
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
     // ESTADOS REACTIVOS
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     private val _isEmergencyActive = MutableStateFlow(false)
     val isEmergencyActive: StateFlow<Boolean> = _isEmergencyActive.asStateFlow()
@@ -51,11 +58,9 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     val currentDangerZone: StateFlow<SmartZoneDetector.DangerousZone?> =
         _currentDangerZone.asStateFlow()
 
-    // 🆕 Ciudad detectada
     private val _detectedCity = MutableStateFlow<SmartZoneDetector.DetectedCity?>(null)
     val detectedCity: StateFlow<SmartZoneDetector.DetectedCity?> = _detectedCity.asStateFlow()
 
-    // 🆕 Estado de carga
     private val _isLoadingZones = MutableStateFlow(false)
     val isLoadingZones: StateFlow<Boolean> = _isLoadingZones.asStateFlow()
 
@@ -67,18 +72,14 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
             initialValue = emptyList()
         )
 
-    // ═══════════════════════════════════════════════════════════
-    // INICIALIZACIÓN
-    // ═══════════════════════════════════════════════════════════
-
     init {
         startLocationTracking()
         observeLocationForSmartDetection()
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 🌍 NUEVA FUNCIONALIDAD: DETECCIÓN INTELIGENTE
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
+    // 🌍 DETECCIÓN INTELIGENTE
+    // ══════════════════════════════════════════════════════════
 
     private fun observeLocationForSmartDetection() {
         viewModelScope.launch {
@@ -137,21 +138,24 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 🚨 FUNCIONALIDAD PRINCIPAL: EMERGENCIAS
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
+    // 🚨 EMERGENCIA - NUEVO FLUJO
+    // ══════════════════════════════════════════════════════════
 
     /**
-     * 🚨 ACTIVAR EMERGENCIA - VERSIÓN FINAL
+     * 🚨 ACTIVAR EMERGENCIA - NUEVO FLUJO
      *
-     * FLUJO COMPLETO:
-     * 1. Obtiene ubicación GPS
-     * 2. Inicia grabación de audio (30 segundos)
-     * 3. Vibra y muestra notificación
-     * 4. ESPERA 30 SEGUNDOS
-     * 5. Detiene grabación
-     * 6. ✅ ENVÍA SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
-     * 7. Guarda en historial
+     * PASO 0: ✅ ENVÍA SMS INMEDIATAMENTE
+     *
+     * PASO 1: Abre WhatsApp con MENSAJE
+     * - Usuario envía mensaje
+     * - Usuario regresa a la app
+     *
+     * PASO 2: La app inicia grabación automáticamente
+     * - Se muestra en pantalla de emergencia
+     *
+     * PASO 3: Cuando termina grabación
+     * - Se abre WhatsApp con AUDIO
      */
     fun activateEmergency() {
         if (_isEmergencyActive.value) return
@@ -163,13 +167,19 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                 // 1️⃣ Obtener ubicación GPS
                 val location = getCurrentLocation()
 
-                // 2️⃣ Iniciar grabación de audio
-                startAudioRecording()
+                // 2️⃣ ✅ ENVIAR SMS INMEDIATAMENTE (ANTES DE TODO)
+                location?.let { loc ->
+                    sendEmergencySMSToAll(
+                        latitude = loc.latitude,
+                        longitude = loc.longitude,
+                        audioFilePath = null  // Todavía no hay audio
+                    )
+                }
 
                 // 3️⃣ Vibrar
                 notificationUtils.vibrateEmergency()
 
-                // 4️⃣ Mostrar notificación inicial
+                // 4️⃣ Mostrar notificación
                 location?.let {
                     notificationUtils.showEmergencyNotification(
                         latitude = it.latitude,
@@ -177,22 +187,34 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
 
-                // 5️⃣ ⏱️ ESPERAR 30 SEGUNDOS (mientras graba)
-                delay(30_000)
+                // 5️⃣ 💬 ABRIR WHATSAPP CON MENSAJE
+                location?.let { loc ->
+                    openWhatsAppWithMessage(
+                        latitude = loc.latitude,
+                        longitude = loc.longitude
+                    )
+                }
 
-                // 6️⃣ Detener grabación
+                // 6️⃣ Iniciar grabación de audio
+                startAudioRecording()
+
+                // 7️⃣ ⏱️ ESPERAR según duración configurada
+                val recordingDuration = getRecordingDuration()
+                delay(recordingDuration * 1000L)
+
+                // 8️⃣ Detener grabación
                 val audioFile = stopAudioRecording()
 
-                // 7️⃣ ✅ ENVIAR SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
+                // 9️⃣ 💬 ABRIR WHATSAPP CON AUDIO
                 location?.let { loc ->
-                    sendEmergencySMSToAll(
+                    openWhatsAppWithAudio(
                         latitude = loc.latitude,
                         longitude = loc.longitude,
                         audioFilePath = audioFile?.absolutePath
                     )
                 }
 
-                // 8️⃣ Guardar en historial
+                // 🔟 Guardar en historial
                 val contactsCount = emergencyDao.getAllContacts().first().size
                 saveEmergencyToHistory(location, audioFile?.absolutePath, contactsCount)
 
@@ -215,9 +237,74 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
+    // 💬 WHATSAPP - ENVÍO EN 2 PASOS
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * 📝 PASO 1: Abre WhatsApp solo con MENSAJE
+     */
+    private fun openWhatsAppWithMessage(
+        latitude: Double,
+        longitude: Double
+    ) {
+        try {
+            val whatsAppUtils = WhatsAppUtils(context)
+            whatsAppUtils.shareEmergencyLocation(
+                latitude = latitude,
+                longitude = longitude
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 🎙️ PASO 2: Abre WhatsApp solo con AUDIO
+     */
+    private fun openWhatsAppWithAudio(
+        latitude: Double,
+        longitude: Double,
+        audioFilePath: String?
+    ) {
+        try {
+            if (audioFilePath == null) return
+
+            val whatsAppUtils = WhatsAppUtils(context)
+            whatsAppUtils.openWhatsAppWithAudio(
+                latitude = latitude,
+                longitude = longitude,
+                audioFilePath = audioFilePath
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 💬 Comparte ubicación por WhatsApp MANUALMENTE (desde botón)
+     */
+    fun shareLocationViaWhatsApp(phoneNumber: String? = null) {
+        viewModelScope.launch {
+            try {
+                val location = _currentLocation.value
+                if (location != null) {
+                    val whatsAppUtils = WhatsAppUtils(context)
+                    whatsAppUtils.shareEmergencyLocation(
+                        latitude = location.latitude,
+                        longitude = location.longitude,
+                        phoneNumber = phoneNumber
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
     // 📍 UBICACIÓN GPS
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     private fun startLocationTracking() {
         if (!locationUtils.hasLocationPermission()) return
@@ -246,9 +333,9 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
     // 🎙️ GRABACIÓN DE AUDIO
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     private fun startAudioRecording() {
         if (!audioRecorder.hasAudioPermission()) return
@@ -276,28 +363,29 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 📱 ENVÍO DE MENSAJES - SMS AUTOMÁTICO
-    // ═══════════════════════════════════════════════════════════
-
     /**
-     * 📨 ENVÍA SMS AUTOMÁTICAMENTE A TODOS LOS CONTACTOS
-     * Incluye: ubicación GPS + ruta del audio grabado
+     * Obtiene duración de grabación desde Settings
      */
+    private fun getRecordingDuration(): Int {
+        return prefs.getInt("recording_duration", 60)
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // 📱 ENVÍO DE SMS (RESPALDO)
+    // ══════════════════════════════════════════════════════════
+
     private suspend fun sendEmergencySMSToAll(
         latitude: Double,
         longitude: Double,
         audioFilePath: String?
     ) {
         try {
-            // Obtener TODOS los contactos
             val contacts = emergencyDao.getAllContacts().first()
 
             if (contacts.isEmpty()) {
                 return
             }
 
-            // Enviar SMS a cada contacto
             notificationUtils.sendEmergencySMS(
                 contacts = contacts,
                 latitude = latitude,
@@ -310,9 +398,9 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
     // 📞 CONTACTOS DE EMERGENCIA - CRUD
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     fun addEmergencyContact(contact: EmergencyContact) {
         viewModelScope.launch {
@@ -344,43 +432,17 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
     // 🗺️ ZONAS PELIGROSAS
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     fun getAllDangerousZones(): List<SmartZoneDetector.DangerousZone> {
         return _detectedCity.value?.dangerousZones ?: emptyList()
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 💬 WHATSAPP - SOLO MANUAL (OPCIONAL)
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * 💬 Comparte ubicación por WhatsApp MANUALMENTE
-     * El usuario presiona el botón y elige el contacto
-     */
-    fun shareLocationViaWhatsApp(phoneNumber: String? = null) {
-        viewModelScope.launch {
-            try {
-                val location = _currentLocation.value
-                if (location != null) {
-                    val whatsAppUtils = WhatsAppUtils(context)
-                    whatsAppUtils.shareEmergencyLocation(
-                        latitude = location.latitude,
-                        longitude = location.longitude,
-                        phoneNumber = phoneNumber
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
     // 📜 HISTORIAL DE EMERGENCIAS
-    // ═══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
 
     private suspend fun saveEmergencyToHistory(
         location: Location?,

@@ -6,18 +6,21 @@ import android.net.Uri
 import android.widget.Toast
 
 /**
- * 💬 UTILIDAD PARA COMPARTIR POR WHATSAPP
- * Permite enviar ubicación de emergencia directamente por WhatsApp
+ * 💬 WHATSAPP UTILS - VERSIÓN SIMPLIFICADA PARA NUEVO FLUJO
+ *
+ * ESTRATEGIA:
+ * 1. Mensaje se envía primero (solo texto)
+ * 2. Audio se envía después (solo audio)
+ *
+ * Usuario regresa a la app entre ambos envíos
  */
 class WhatsAppUtils(private val context: Context) {
 
     /**
-     * Comparte ubicación de emergencia por WhatsApp
+     * 📝 Envía solo MENSAJE de emergencia por WhatsApp
      *
-     * @param latitude Latitud GPS
-     * @param longitude Longitud GPS
-     * @param phoneNumber Número de teléfono (opcional, con código de país)
-     * @param customMessage Mensaje personalizado (opcional)
+     * Este es el PRIMER paso
+     * Usuario selecciona contacto, envía, y regresa a la app
      */
     fun shareEmergencyLocation(
         latitude: Double,
@@ -27,21 +30,21 @@ class WhatsAppUtils(private val context: Context) {
     ) {
         try {
             val mapsUrl = "https://maps.google.com/?q=$latitude,$longitude"
-
-            val message = customMessage ?: buildDefaultMessage(latitude, longitude, mapsUrl)
+            val message = customMessage ?: buildEmergencyMessage(latitude, longitude, mapsUrl)
 
             val intent = if (phoneNumber != null) {
-                // Enviar a un contacto específico
+                // Enviar a contacto específico
                 Intent(Intent.ACTION_VIEW).apply {
                     data = Uri.parse("https://api.whatsapp.com/send?phone=$phoneNumber&text=${Uri.encode(message)}")
                     setPackage("com.whatsapp")
                 }
             } else {
-                // Abrir selector de contactos
+                // Selector de contactos
                 Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, message)
                     setPackage("com.whatsapp")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             }
 
@@ -49,9 +52,69 @@ class WhatsAppUtils(private val context: Context) {
 
         } catch (e: Exception) {
             e.printStackTrace()
+            Toast.makeText(
+                context,
+                "WhatsApp no está instalado",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 
-            // Si WhatsApp no está instalado, mostrar alternativas
-            showWhatsAppNotInstalledDialog()
+    /**
+     * 🎙️ Envía solo AUDIO de emergencia por WhatsApp
+     *
+     * Este es el SEGUNDO paso
+     * Usuario selecciona el MISMO contacto, envía
+     */
+    fun openWhatsAppWithAudio(
+        latitude: Double,
+        longitude: Double,
+        audioFilePath: String
+    ) {
+        try {
+            val audioFile = java.io.File(audioFilePath)
+
+            if (!audioFile.exists()) {
+                Toast.makeText(
+                    context,
+                    "No se encontró el audio grabado",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+
+            // Crear URI del audio usando FileProvider
+            val audioUri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                audioFile
+            )
+
+            // Intent para compartir solo el audio
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "audio/*"
+                putExtra(Intent.EXTRA_STREAM, audioUri)
+                setPackage("com.whatsapp")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            context.startActivity(intent)
+
+            // Instrucción al usuario
+            Toast.makeText(
+                context,
+                "🎙️ Envía este audio al mismo contacto",
+                Toast.LENGTH_LONG
+            ).show()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(
+                context,
+                "Error al compartir audio",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -68,7 +131,7 @@ class WhatsAppUtils(private val context: Context) {
     }
 
     /**
-     * Comparte por WhatsApp Business (si está instalado)
+     * WhatsApp Business
      */
     fun shareViaWhatsAppBusiness(
         latitude: Double,
@@ -77,7 +140,7 @@ class WhatsAppUtils(private val context: Context) {
     ) {
         try {
             val mapsUrl = "https://maps.google.com/?q=$latitude,$longitude"
-            val message = buildDefaultMessage(latitude, longitude, mapsUrl)
+            val message = buildEmergencyMessage(latitude, longitude, mapsUrl)
 
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 data = if (phoneNumber != null) {
@@ -92,13 +155,12 @@ class WhatsAppUtils(private val context: Context) {
 
         } catch (e: Exception) {
             e.printStackTrace()
-            // Fallback a WhatsApp normal
             shareEmergencyLocation(latitude, longitude, phoneNumber)
         }
     }
 
     /**
-     * Comparte ubicación por otras apps (SMS, Telegram, etc.)
+     * Compartir por otras apps
      */
     fun shareLocationViaOtherApps(
         latitude: Double,
@@ -106,7 +168,7 @@ class WhatsAppUtils(private val context: Context) {
     ) {
         try {
             val mapsUrl = "https://maps.google.com/?q=$latitude,$longitude"
-            val message = buildDefaultMessage(latitude, longitude, mapsUrl)
+            val message = buildEmergencyMessage(latitude, longitude, mapsUrl)
 
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
@@ -122,22 +184,22 @@ class WhatsAppUtils(private val context: Context) {
             e.printStackTrace()
             Toast.makeText(
                 context,
-                "Error al compartir ubicación",
+                "Error al compartir",
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
 
     /**
-     * Construye el mensaje por defecto
+     * Mensaje de emergencia con ubicación
      */
-    private fun buildDefaultMessage(
+    private fun buildEmergencyMessage(
         latitude: Double,
         longitude: Double,
         mapsUrl: String
     ): String {
         return """
-🚨 *ALERTA DE EMERGENCIA* - SafeZone AI
+🚨 *EMERGENCIA - SafeZone AI*
 
 He activado el botón de emergencia.
 
@@ -145,39 +207,26 @@ He activado el botón de emergencia.
 $mapsUrl
 
 📊 *Coordenadas GPS:*
-Latitud: $latitude
-Longitud: $longitude
+Lat: $latitude
+Lon: $longitude
 
 ⏰ *Hora:* ${getCurrentTime()}
 
-Por favor, verifica mi seguridad lo antes posible.
+🎙️ *Audio de emergencia siguiente*
+
+⚠️ Por favor verifica mi seguridad
         """.trimIndent()
     }
 
     /**
-     * Obtiene la hora actual formateada
+     * Hora actual
      */
     private fun getCurrentTime(): String {
         val sdf = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
         return sdf.format(java.util.Date())
     }
 
-    /**
-     * Muestra diálogo cuando WhatsApp no está instalado
-     */
-    private fun showWhatsAppNotInstalledDialog() {
-        Toast.makeText(
-            context,
-            "WhatsApp no está instalado. Usa la opción de compartir por otras apps.",
-            Toast.LENGTH_LONG
-        ).show()
-    }
-
     companion object {
-        /**
-         * Limpia y formatea un número de teléfono para WhatsApp
-         * Ejemplo: +593 999 999 999 -> 593999999999
-         */
         fun formatPhoneNumber(phone: String): String {
             return phone.replace(Regex("[^0-9+]"), "")
                 .removePrefix("+")

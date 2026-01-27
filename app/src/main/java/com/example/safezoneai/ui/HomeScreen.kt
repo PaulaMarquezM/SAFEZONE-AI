@@ -3,10 +3,11 @@ package com.example.safezoneai.ui
 import android.location.Location
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,11 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,7 +27,9 @@ import com.example.safezoneai.utils.WhatsAppUtils
 import com.example.safezoneai.viewmodel.EmergencyViewModel
 
 /**
- * ✨ HomeScreen MINIMALISTA - Versión limpia y profesional
+ * ✨ HomeScreen MINIMALISTA - Versión limpia, profesional y 100% RESPONSIVE
+ * ✅ Optimizado para pantallas pequeñas y grandes
+ * ✅ Scroll vertical completo
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,44 +78,17 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // Historial
                     IconButton(onClick = onNavigateToHistory) {
-                        Icon(
-                            Icons.Default.History,
-                            "Historial",
-                            tint = PureWhite,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Icon(Icons.Default.History, "Historial", tint = PureWhite, modifier = Modifier.size(22.dp))
                     }
-
-                    // Configuración
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            Icons.Default.Settings,
-                            "Configuración",
-                            tint = PureWhite,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Icon(Icons.Default.Settings, "Configuración", tint = PureWhite, modifier = Modifier.size(22.dp))
                     }
-
-                    // Contactos
                     IconButton(onClick = onNavigateToContacts) {
-                        Icon(
-                            Icons.Default.ContactPhone,
-                            "Contactos",
-                            tint = PureWhite,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Icon(Icons.Default.ContactPhone, "Contactos", tint = PureWhite, modifier = Modifier.size(22.dp))
                     }
-
-                    // Mapa
                     IconButton(onClick = onNavigateToMap) {
-                        Icon(
-                            Icons.Default.Map,
-                            "Ver Mapa",
-                            tint = PureWhite,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Icon(Icons.Default.Map, "Ver Mapa", tint = PureWhite, modifier = Modifier.size(22.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -131,14 +105,16 @@ fun HomeScreen(
                 .background(Color(0xFFF8F9FA))
                 .padding(padding)
         ) {
+            // ✅ SCROLL VERTICAL COMPLETO
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // ✅ TARJETA DE ESTADO - MINIMALISTA
+                // Tarjeta de estado
                 if (isLoadingZones) {
                     LoadingZonesCardMinimalist()
                 } else {
@@ -149,9 +125,7 @@ fun HomeScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // ✅ BOTÓN DE EMERGENCIA
+                // Botón de emergencia
                 EmergencyButtonMinimalist(
                     isActive = isEmergencyActive,
                     onClick = {
@@ -164,25 +138,24 @@ fun HomeScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
-
                 // WhatsApp Button
                 WhatsAppShareButtonMinimalist(
                     viewModel = viewModel,
                     currentLocation = currentLocation
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
-
                 // Info Section
                 InfoSectionMinimalist()
+
+                // Espacio final
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✨ TARJETA DE ESTADO MINIMALISTA
+// ✨ TARJETA DE ESTADO MINIMALISTA Y COMPACTA
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -197,42 +170,34 @@ fun SafetyStatusCardMinimalist(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = PureWhite
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
-        )
+        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(18.dp),  // ✅ Compacto
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ✅ ICONO SIMPLE - Sin círculo grande
             Icon(
                 imageVector = if (isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
                 contentDescription = null,
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(44.dp),  // ✅ Más pequeño
                 tint = if (isSafe) SafeGreen else DangerRed
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // ✅ TEXTO SIMPLE - Sin duplicar
             Text(
                 text = if (isSafe) "Zona Segura" else "Zona Peligrosa",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,  // ✅ Reducido
                 fontWeight = FontWeight.Bold,
                 color = if (isSafe) SafeGreen else DangerRed
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Información de la zona
             if (currentDangerZone != null && !isSafe) {
-                // Nombre de la zona
                 Text(
                     text = currentDangerZone.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -242,13 +207,10 @@ fun SafetyStatusCardMinimalist(
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                // Badge de nivel de peligro
                 DangerLevelBadgeMinimalist(currentDangerZone.dangerLevel)
 
-                // Descripción
                 if (currentDangerZone.description.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = currentDangerZone.description,
                         style = MaterialTheme.typography.bodyMedium,
@@ -257,8 +219,7 @@ fun SafetyStatusCardMinimalist(
                     )
                 }
 
-                // Fuente
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Fuente: ${currentDangerZone.source}",
                     style = MaterialTheme.typography.bodySmall,
@@ -266,7 +227,6 @@ fun SafetyStatusCardMinimalist(
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                 )
             } else if (currentDangerZone?.dangerLevel == SmartZoneDetector.DangerLevel.SAFE) {
-                // Zona segura identificada
                 Text(
                     text = currentDangerZone.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -292,21 +252,13 @@ fun SafetyStatusCardMinimalist(
                 )
             }
 
-            // Ubicación GPS
             if (currentLocation != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color(0xFFE0E0E0))
                 Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color(0xFFE0E0E0))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        null,
-                        modifier = Modifier.size(16.dp),
-                        tint = TextSecondary
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(16.dp), tint = TextSecondary)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "${String.format("%.4f", currentLocation.latitude)}, ${String.format("%.4f", currentLocation.longitude)}",
@@ -317,10 +269,9 @@ fun SafetyStatusCardMinimalist(
                 }
             }
 
-            // Número de zonas monitoreadas
             detectedCity?.let { city ->
                 if (city.dangerousZones.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "${city.dangerousZones.size} zonas monitoreadas en ${city.name}",
                         style = MaterialTheme.typography.bodySmall,
@@ -343,15 +294,15 @@ fun LoadingZonesCardMinimalist() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(32.dp),
+                .padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
                 color = SafeGreen,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(36.dp),
                 strokeWidth = 3.dp
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = "Detectando tu ubicación...",
                 style = MaterialTheme.typography.bodyLarge,
@@ -388,7 +339,7 @@ fun DangerLevelBadgeMinimalist(level: SmartZoneDetector.DangerLevel) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✨ BOTÓN DE EMERGENCIA MINIMALISTA
+// ✨ BOTÓN DE EMERGENCIA - MÁS COMPACTO
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -414,7 +365,7 @@ fun EmergencyButtonMinimalist(
         Button(
             onClick = onClick,
             modifier = Modifier
-                .size(180.dp)
+                .size(200.dp)  // ✅ Reducido de 180dp a 150dp
                 .scale(scale),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
@@ -432,35 +383,37 @@ fun EmergencyButtonMinimalist(
                 Icon(
                     imageVector = if (isActive) Icons.Default.Stop else Icons.Default.Warning,
                     contentDescription = null,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(52.dp),  // ✅ Reducido
                     tint = PureWhite
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if (isActive) "DETENER" else "EMERGENCIA",
-                    fontSize = 20.sp,
+                    text = if (isActive) "DETENER" else "Emergencia",  // ✅ "SOS" es más corto
+                    fontSize = 17.sp,  // ✅ Reducido
                     fontWeight = FontWeight.Bold,
-                    color = PureWhite
+                    color = PureWhite,
+                    letterSpacing = 2.sp
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = if (isActive)
-                "Emergencia activa - Grabando audio"
+                "Grabando evidencia..."
             else
                 "Presiona en caso de emergencia",
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
         )
     }
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✨ WHATSAPP BUTTON MINIMALISTA
+// ✨ WHATSAPP BUTTON - MÁS COMPACTO
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -479,7 +432,7 @@ fun WhatsAppShareButtonMinimalist(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .height(48.dp),  // ✅ Reducido
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF25D366)
@@ -492,21 +445,21 @@ fun WhatsAppShareButtonMinimalist(
                 Icons.Default.Chat,
                 null,
                 tint = PureWhite,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 "Compartir ubicación por WhatsApp",
                 color = PureWhite,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
+                fontSize = 14.sp
             )
         }
     }
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✨ INFO SECTION MINIMALISTA
+// ✨ INFO SECTION - MÁS COMPACTA
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -518,16 +471,16 @@ fun InfoSectionMinimalist() {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(18.dp)  // ✅ Reducido de 20dp a 18dp
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Shield,
                     null,
                     tint = SafeGreen,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)  // ✅ Reducido
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "¿Qué hace el botón de emergencia?",
                     style = MaterialTheme.typography.titleMedium,
@@ -536,7 +489,7 @@ fun InfoSectionMinimalist() {
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))  // ✅ Reducido
 
             InfoItemMinimalist(Icons.Default.LocationOn, "Registra tu ubicación GPS")
             InfoItemMinimalist(Icons.Default.Mic, "Graba audio automáticamente")
@@ -554,16 +507,16 @@ fun InfoItemMinimalist(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 5.dp),  // ✅ Reducido de 6dp a 5dp
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             icon,
             null,
             tint = SafeGreen,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(19.dp)  // ✅ Reducido
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
