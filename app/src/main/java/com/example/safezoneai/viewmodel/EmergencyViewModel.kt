@@ -15,8 +15,19 @@ import com.example.safezoneai.utils.LocationUtils
 import com.example.safezoneai.utils.NotificationUtils
 import com.example.safezoneai.utils.WhatsAppUtils
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import android.location.Geocoder
+import java.util.Locale
+
 
 /**
  * 🧠 ViewModel - VERSIÓN FINAL
@@ -35,6 +46,8 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     private val locationUtils = LocationUtils(context)
     private val audioRecorder = AudioRecorder(context)
     private val notificationUtils = NotificationUtils(context)
+
+    private var lastAlertZoneName: String? = null
 
     private val smartZoneDetector = SmartZoneDetector(context)
     private val database = AppDatabase.getDatabase(context)
@@ -64,6 +77,10 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isLoadingZones = MutableStateFlow(false)
     val isLoadingZones: StateFlow<Boolean> = _isLoadingZones.asStateFlow()
 
+    private val _currentAddress = MutableStateFlow<String?>(null)
+    val currentAddress: StateFlow<String?> = _currentAddress.asStateFlow()
+
+
     val emergencyContacts: StateFlow<List<EmergencyContact>> = emergencyDao
         .getAllContacts()
         .stateIn(
@@ -81,6 +98,43 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     // 🌍 DETECCIÓN INTELIGENTE
     // ══════════════════════════════════════════════════════════
 
+    private fun updateAddressFromLocation(location: Location) {
+        viewModelScope.launch {
+            try {
+                val geocoder = Geocoder(context, Locale.getDefault())
+                val results = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+
+                val addr = results?.firstOrNull()
+
+                val street = addr?.thoroughfare ?: addr?.subThoroughfare
+                val number = addr?.subThoroughfare
+                val avenue = addr?.featureName
+                val neighborhood = addr?.subLocality
+                val city = addr?.locality ?: addr?.subAdminArea
+                val state = addr?.adminArea
+                val country = addr?.countryName
+
+                // Armado “bonito” con lo disponible
+                val line1 = listOfNotNull(
+                    street?.let { s -> if (number != null) "$s $number" else s },
+                    neighborhood
+                ).joinToString(", ").takeIf { it.isNotBlank() }
+
+                val line2 = listOfNotNull(city, state, country)
+                    .joinToString(", ")
+                    .takeIf { it.isNotBlank() }
+
+                _currentAddress.value = listOfNotNull(line1, line2).joinToString(" • ")
+                    .ifBlank { null }
+
+            } catch (e: Exception) {
+                // Si falla, no rompemos la app
+                _currentAddress.value = null
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun observeLocationForSmartDetection() {
         viewModelScope.launch {
             _currentLocation
@@ -94,7 +148,7 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                         latitude = new.latitude
                         longitude = new.longitude
                     }
-                    oldLoc.distanceTo(newLoc) < 500
+                    oldLoc.distanceTo(newLoc) < 50
                 }
                 .collect { location ->
                     detectCityAndLoadZones(location.latitude, location.longitude)
@@ -119,8 +173,9 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
 
                 if (currentZone != null &&
                     currentZone.dangerLevel != SmartZoneDetector.DangerLevel.SAFE &&
-                    _currentDangerZone.value != currentZone
+                    lastAlertZoneName != currentZone.name
                 ) {
+                    lastAlertZoneName = currentZone.name
 
                     notificationUtils.showDangerZoneAlert(
                         zoneName = currentZone.name,
@@ -128,6 +183,7 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                     notificationUtils.vibrateEmergency()
                 }
+
 
                 _currentDangerZone.value = currentZone
             }
@@ -237,6 +293,20 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun stopOnlyAudioRecording() {
+        viewModelScope.launch {
+            try {
+                if (_isRecording.value) {
+                    audioRecorder.stopRecording()
+                    _isRecording.value = false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+
     // ══════════════════════════════════════════════════════════
     // 💬 WHATSAPP - ENVÍO EN 2 PASOS
     // ══════════════════════════════════════════════════════════
@@ -315,6 +385,8 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                     .catch { e -> e.printStackTrace() }
                     .collect { location ->
                         _currentLocation.value = location
+                        updateAddressFromLocation(location)
+
                     }
             } catch (e: SecurityException) {
                 e.printStackTrace()

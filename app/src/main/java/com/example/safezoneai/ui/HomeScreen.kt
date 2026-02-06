@@ -46,6 +46,7 @@ fun HomeScreen(
     val isEmergencyActive by viewModel.isEmergencyActive.collectAsState()
     val detectedCity by viewModel.detectedCity.collectAsState()
     val isLoadingZones by viewModel.isLoadingZones.collectAsState()
+    val isRecording by viewModel.isRecording.collectAsState()
 
     Scaffold(
         topBar = {
@@ -137,6 +138,13 @@ fun HomeScreen(
                         }
                     }
                 )
+
+                // 👉 BOTÓN NUEVO SOLO AUDIO (debajo del grande)
+                if (isRecording) {
+                    StopAudioButtonMinimalist(
+                        onClick = { viewModel.stopOnlyAudioRecording() }
+                    )
+                }
 
                 // WhatsApp Button
                 WhatsAppShareButtonMinimalist(
@@ -521,6 +529,36 @@ fun InfoItemMinimalist(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = TextDark
+        )
+    }
+}
+
+@Composable
+fun StopAudioButtonMinimalist(
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = WarningBrown
+        )
+    ) {
+        Icon(
+            Icons.Default.MicOff,
+            contentDescription = null,
+            tint = PureWhite,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Detener grabación de audio",
+            color = PureWhite,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
         )
     }
 }

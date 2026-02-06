@@ -35,6 +35,7 @@ fun EmergencyScreen(
     val isRecording by viewModel.isRecording.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
     val emergencyContacts by viewModel.emergencyContacts.collectAsState()
+    val currentAddress by viewModel.currentAddress.collectAsState()
 
     // Animación parpadeo
     val infiniteTransition = rememberInfiniteTransition(label = "blink")
@@ -114,6 +115,17 @@ fun EmergencyScreen(
                         enabled = true
                     )
 
+                    // 🎙️ BOTÓN DETENER SOLO AUDIO (SOLO SI GRABA)
+                    if (isRecording) {
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        StopAudioButtonEmergencyStyle(
+                            onClick = {
+                                viewModel.stopOnlyAudioRecording()
+                            }
+                        )
+                    }
+
                     // 🔴 BOTÓN DETENER
                     StopEmergencyButton {
                         viewModel.deactivateEmergency()
@@ -147,7 +159,8 @@ fun EmergencyScreen(
                 EmergencyStatusCard(
                     isRecording = isRecording,
                     currentLocation = currentLocation,
-                    contactsNotified = emergencyContacts.size
+                    contactsNotified = emergencyContacts.size,
+                    addressText = currentAddress
                 )
 
                 // ✅ ESPACIO EXTRA PARA QUE NO SE CORTE CON EL BOTTOMBAR
@@ -221,7 +234,8 @@ fun EmergencyTimer(elapsedSeconds: Int) {
 fun EmergencyStatusCard(
     isRecording: Boolean,
     currentLocation: android.location.Location?,
-    contactsNotified: Int
+    contactsNotified: Int,
+    addressText: String?
 ) {
     Card(
         modifier = Modifier
@@ -257,13 +271,12 @@ fun EmergencyStatusCard(
 
             EmergencyStatusItem(
                 Icons.Default.LocationOn,
-                "Ubicación GPS",
-                currentLocation?.let {
-                    "${"%.4f".format(it.latitude)}, ${"%.4f".format(it.longitude)}"
-                } ?: "Obteniendo...",
-                currentLocation != null,
-                if (currentLocation != null) SafeGreen else WarningBrown
+                "Ubicación",
+                addressText ?: "Obteniendo dirección...",
+                addressText != null,
+                if (addressText != null) SafeGreen else WarningBrown
             )
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -357,6 +370,41 @@ fun StopEmergencyButton(onClick: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun StopAudioButtonEmergencyStyle(
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF7A8B50) // mismo verde oliva
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Icon(
+            imageVector = Icons.Default.MicOff,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "DETENER GRABACIÓN DE AUDIO",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
 
 // ────────────────────────────────────────────────────────────────
 
