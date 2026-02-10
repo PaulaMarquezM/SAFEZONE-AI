@@ -10,6 +10,7 @@
     <!-- 🔄 FOREGROUND SERVICE -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- 🎤 PERMISO DE AUDIO -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -74,6 +75,16 @@
             android:name=".service.LocationTrackingService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- 🔊 SERVICIO DE EMERGENCIA POR BOTÓN DE VOLUMEN -->
+        <service
+            android:name=".service.VolumeEmergencyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Emergency trigger via volume button detection" />
+        </service>
 
         <!-- 📍 GOOGLE PLAY SERVICES -->
         <meta-data

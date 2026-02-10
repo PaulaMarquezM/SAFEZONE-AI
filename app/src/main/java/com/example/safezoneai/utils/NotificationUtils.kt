@@ -162,19 +162,22 @@ class NotificationUtils(private val context: Context) {
         contacts: List<EmergencyContact>,
         latitude: Double,
         longitude: Double,
-        audioFilePath: String?
+        audioFilePath: String?,
+        hasLocation: Boolean = true
     ) {
         if (!hasSMSPermission()) return
 
-        val message = buildEmergencyMessage(latitude, longitude, audioFilePath)
+        val message = buildEmergencyMessage(latitude, longitude, audioFilePath, hasLocation)
 
         try {
-            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val smsManager: SmsManager? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 context.getSystemService(SmsManager::class.java)
             } else {
                 @Suppress("DEPRECATION")
                 SmsManager.getDefault()
             }
+
+            if (smsManager == null) return
 
             contacts.forEach { contact ->
                 try {
@@ -197,23 +200,38 @@ class NotificationUtils(private val context: Context) {
     private fun buildEmergencyMessage(
         latitude: Double,
         longitude: Double,
-        audioFilePath: String?
+        audioFilePath: String?,
+        hasLocation: Boolean = true
     ): String {
-        val mapsUrl = "https://maps.google.com/?q=$latitude,$longitude"
-        return """
-            🚨 ALERTA DE EMERGENCIA - SafeZone AI
-            
-            He activado el botón de emergencia.
-            
-            📍 Mi ubicación:
-            $mapsUrl
-            
-            Coordenadas: $latitude, $longitude
-            
-            ${if (audioFilePath != null) "🎙️ Audio de emergencia grabado" else ""}
-            
-            Por favor, verifica mi seguridad.
-        """.trimIndent()
+        return if (hasLocation) {
+            val mapsUrl = "https://maps.google.com/?q=$latitude,$longitude"
+            """
+                🚨 ALERTA DE EMERGENCIA - SafeZone AI
+
+                He activado el botón de emergencia.
+
+                📍 Mi ubicación:
+                $mapsUrl
+
+                Coordenadas: $latitude, $longitude
+
+                ${if (audioFilePath != null) "🎙️ Audio de emergencia grabado" else ""}
+
+                Por favor, verifica mi seguridad.
+            """.trimIndent()
+        } else {
+            """
+                🚨 ALERTA DE EMERGENCIA - SafeZone AI
+
+                He activado el botón de emergencia.
+
+                📍 No se pudo obtener la ubicación GPS.
+
+                ${if (audioFilePath != null) "🎙️ Audio de emergencia grabado" else ""}
+
+                Por favor, verifica mi seguridad.
+            """.trimIndent()
+        }
     }
 
     /**

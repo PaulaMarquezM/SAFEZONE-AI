@@ -75,11 +75,29 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     private val _detectedCity = MutableStateFlow<SmartZoneDetector.DetectedCity?>(null)
     val detectedCity: StateFlow<SmartZoneDetector.DetectedCity?> = _detectedCity.asStateFlow()
 
-    private val _isLoadingZones = MutableStateFlow(false)
+    private val _isLoadingZones = MutableStateFlow(true)
     val isLoadingZones: StateFlow<Boolean> = _isLoadingZones.asStateFlow()
 
     private val _currentAddress = MutableStateFlow<String?>(null)
     val currentAddress: StateFlow<String?> = _currentAddress.asStateFlow()
+
+    private val _locationError = MutableStateFlow<String?>(null)
+    val locationError: StateFlow<String?> = _locationError.asStateFlow()
+
+    // Trigger para emergencia desde botón de volumen
+    private val _volumeEmergencyTriggered = MutableStateFlow(false)
+    val volumeEmergencyTriggered: StateFlow<Boolean> = _volumeEmergencyTriggered.asStateFlow()
+
+    fun triggerEmergencyFromVolume() {
+        if (!_isEmergencyActive.value) {
+            _volumeEmergencyTriggered.value = true
+            activateEmergency()
+        }
+    }
+
+    fun clearVolumeEmergencyTrigger() {
+        _volumeEmergencyTriggered.value = false
+    }
 
 
     val emergencyContacts: StateFlow<List<EmergencyContact>> = emergencyDao
@@ -249,26 +267,27 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 _isEmergencyActive.value = true
 
-                // 1️⃣ Obtener ubicación GPS
-                val location = getCurrentLocation()
-
-                // 2️⃣ ✅ ENVIAR SMS INMEDIATAMENTE (ANTES DE TODO)
-                location?.let { loc ->
-                    sendEmergencySMSToAll(
-                        latitude = loc.latitude,
-                        longitude = loc.longitude,
-                        audioFilePath = null  // Todavía no hay audio
-                    )
-                }
-
-                // 3️⃣ Vibrar
+                // 1️⃣ VIBRAR INMEDIATAMENTE
                 notificationUtils.vibrateEmergency()
 
+                // 2️⃣ ✅ ENVIAR SMS AL INSTANTE con la ubicación que ya tenemos
+                val quickLocation = _currentLocation.value
+                sendEmergencySMSToAll(
+                    latitude = quickLocation?.latitude ?: 0.0,
+                    longitude = quickLocation?.longitude ?: 0.0,
+                    audioFilePath = null,
+                    hasLocation = quickLocation != null
+                )
+
+                // 3️⃣ Obtener ubicación fresca para WhatsApp/notificación
+                val freshLocation = getCurrentLocation()
+                val location = freshLocation ?: quickLocation
+
                 // 4️⃣ Mostrar notificación
-                location?.let {
+                if (location != null) {
                     notificationUtils.showEmergencyNotification(
-                        latitude = it.latitude,
-                        longitude = it.longitude
+                        latitude = location.latitude,
+                        longitude = location.longitude
                     )
                 }
 
@@ -406,19 +425,35 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     // ══════════════════════════════════════════════════════════
 
     private fun startLocationTracking() {
-        if (!locationUtils.hasLocationPermission()) return
+        if (!locationUtils.hasLocationPermission()) {
+            _locationError.value = "Permisos de ubicación no concedidos"
+            _isLoadingZones.value = false
+            return
+        }
+
+        if (!locationUtils.isGpsEnabled()) {
+            _locationError.value = "Activa el GPS para detectar zonas"
+            _isLoadingZones.value = false
+            return
+        }
 
         viewModelScope.launch {
             try {
+                _locationError.value = null
                 locationUtils.getLocationUpdates(intervalMillis = 5000)
-                    .catch { e -> e.printStackTrace() }
+                    .catch { e ->
+                        e.printStackTrace()
+                        _locationError.value = "Error obteniendo ubicación"
+                        _isLoadingZones.value = false
+                    }
                     .collect { location ->
                         _currentLocation.value = location
                         updateAddressFromLocation(location)
-
                     }
             } catch (e: SecurityException) {
                 e.printStackTrace()
+                _locationError.value = "Error de permisos de ubicación"
+                _isLoadingZones.value = false
             }
         }
     }
@@ -478,7 +513,8 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun sendEmergencySMSToAll(
         latitude: Double,
         longitude: Double,
-        audioFilePath: String?
+        audioFilePath: String?,
+        hasLocation: Boolean = true
     ) {
         try {
             val contacts = emergencyDao.getAllContacts().first()
@@ -491,7 +527,8 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                 contacts = contacts,
                 latitude = latitude,
                 longitude = longitude,
-                audioFilePath = audioFilePath
+                audioFilePath = audioFilePath,
+                hasLocation = hasLocation
             )
 
         } catch (e: Exception) {

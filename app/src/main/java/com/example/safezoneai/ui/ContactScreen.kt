@@ -1,5 +1,10 @@
 package com.example.safezoneai.ui
 
+import android.app.Activity
+import android.content.Intent
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -25,6 +31,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.safezoneai.data.local.EmergencyContact
 import com.example.safezoneai.ui.theme.*
 import com.example.safezoneai.viewmodel.EmergencyViewModel
+
+/**
+ * Limpia un numero telefonico removiendo caracteres no validos.
+ * Mantiene solo digitos y el signo + al inicio.
+ */
+fun cleanPhoneNumber(phone: String): String {
+    return phone.replace(Regex("[^+\\d]"), "")
+}
 
 
 /**
@@ -479,6 +493,7 @@ fun ContactFormDialog(
     onDismiss: () -> Unit,
     onSave: (EmergencyContact) -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf(contact?.name ?: "") }
     var phone by remember { mutableStateOf(contact?.phoneNumber ?: "") }
     var relationship by remember { mutableStateOf(contact?.relationship ?: "Familiar") }
@@ -489,6 +504,43 @@ fun ContactFormDialog(
 
     val relationships = listOf("Familiar", "Amigo/a", "Policía", "Otro")
     var expanded by remember { mutableStateOf(false) }
+
+    // Launcher para importar contacto desde la agenda del telefono
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                try {
+                    context.contentResolver.query(
+                        uri,
+                        arrayOf(
+                            ContactsContract.CommonDataKinds.Phone.NUMBER,
+                            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                        ),
+                        null, null, null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val pickedName = cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                                )
+                            )
+                            val pickedPhone = cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    ContactsContract.CommonDataKinds.Phone.NUMBER
+                                )
+                            )
+                            if (!pickedName.isNullOrBlank()) name = pickedName
+                            if (!pickedPhone.isNullOrBlank()) phone = cleanPhoneNumber(pickedPhone)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -503,7 +555,7 @@ fun ContactFormDialog(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
-                // TÃ­tulo
+                // Titulo
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         if (contact == null) Icons.Default.PersonAdd else Icons.Default.Edit,
@@ -519,7 +571,34 @@ fun ContactFormDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Boton: Importar de la agenda
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_PICK,
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+                        )
+                        contactPickerLauncher.launch(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SafeGreen)
+                ) {
+                    Icon(
+                        Icons.Default.ContactPhone,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Importar de la agenda",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Campo: Nombre
                 OutlinedTextField(
@@ -541,12 +620,12 @@ fun ContactFormDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Campo: TelÃ©fono
+                // Campo: Telefono
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Número telefónico") },
-                    placeholder = { Text("+593 999 999 999") },
+                    label = { Text("Numero telefonico") },
+                    placeholder = { Text("+593999999999") },
                     leadingIcon = {
                         Icon(Icons.Default.Phone, null)
                     },
@@ -698,25 +777,26 @@ fun ContactFormDialog(
 
                     Button(
                         onClick = {
+                            val cleanedPhone = cleanPhoneNumber(phone)
                             when {
                                 name.isBlank() -> {
                                     showError = true
-                                    errorMessage = "El nombre no puede estar vacío"
+                                    errorMessage = "El nombre no puede estar vacio"
                                 }
-                                phone.isBlank() -> {
+                                cleanedPhone.isBlank() -> {
                                     showError = true
-                                    errorMessage = "El teléfono no puede estar vacío"
+                                    errorMessage = "El telefono no puede estar vacio"
                                 }
-                                phone.length < 10 -> {
+                                cleanedPhone.replace("+", "").length < 10 -> {
                                     showError = true
-                                    errorMessage = "Número telefónico inválido"
+                                    errorMessage = "Numero telefonico muy corto (min 10 digitos)"
                                 }
                                 else -> {
                                     onSave(
                                         EmergencyContact(
                                             id = contact?.id ?: 0,
                                             name = name.trim(),
-                                            phoneNumber = phone.trim(),
+                                            phoneNumber = cleanedPhone,
                                             relationship = relationship,
                                             isPrimary = isPrimary
                                         )

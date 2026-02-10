@@ -187,13 +187,13 @@ fun SettingsScreen(
                     SettingsInfoItem(
                         icon = Icons.Default.Person,
                         title = "Desarrollador",
-                        value = "Tu Nombre"
+                        value = "Grupo 3"
                     )
 
                     SettingsInfoItem(
                         icon = Icons.Default.Build,
                         title = "Tecnología",
-                        value = "Kotlin + Jetpack Compose"
+                        value = "Kotlin"
                     )
                 }
 

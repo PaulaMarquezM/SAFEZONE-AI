@@ -5,10 +5,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -16,8 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.safezoneai.service.LocationTrackingService
+import com.example.safezoneai.service.VolumeEmergencyService
 import com.example.safezoneai.ui.AnimatedSplashScreen
 import com.example.safezoneai.ui.ContactsScreen
 import com.example.safezoneai.ui.EmergencyScreen
@@ -46,6 +48,39 @@ import com.example.safezoneai.viewmodel.EmergencyViewModel
  * - Model: Data layer (Room Database, Repositories)
  */
 class MainActivity : ComponentActivity() {
+
+    // ═══════════════════════════════════════════════════════════
+    // VIEWMODEL (compartido con Composables)
+    // ═══════════════════════════════════════════════════════════
+
+    private val emergencyViewModel: EmergencyViewModel by viewModels()
+
+    // ═══════════════════════════════════════════════════════════
+    // DETECCIÓN DE BOTÓN DE VOLUMEN (3 presses = emergencia)
+    // ═══════════════════════════════════════════════════════════
+
+    private val volumePressTimestamps = mutableListOf<Long>()
+    private val requiredPresses = 3
+    private val timeWindowMs = 2000L // 2 segundos para las 3 pulsaciones
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            val now = System.currentTimeMillis()
+
+            // Limpiar pulsaciones antiguas fuera de la ventana de tiempo
+            volumePressTimestamps.removeAll { now - it > timeWindowMs }
+            volumePressTimestamps.add(now)
+
+            if (volumePressTimestamps.size >= requiredPresses) {
+                volumePressTimestamps.clear()
+                // Activar emergencia desde botón de volumen
+                emergencyViewModel.triggerEmergencyFromVolume()
+                Toast.makeText(this, "EMERGENCIA ACTIVADA", Toast.LENGTH_SHORT).show()
+                return true // Consumir el evento, no cambia volumen
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 
     // ═══════════════════════════════════════════════════════════
     // GESTIÓN DE PERMISOS
@@ -100,15 +135,35 @@ class MainActivity : ComponentActivity() {
 
         checkAndRequestPermissions()
 
+        // Iniciar servicio de deteccion de volumen en background
+        VolumeEmergencyService.start(this)
+
+        // Si viene de un intent de emergencia por volumen (app estaba en background)
+        handleEmergencyIntent(intent)
+
         setContent {
             SafeZoneAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SafeZoneApp()
+                    SafeZoneApp(viewModel = emergencyViewModel)
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleEmergencyIntent(intent)
+    }
+
+    private fun handleEmergencyIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("TRIGGER_EMERGENCY", false) == true) {
+            emergencyViewModel.triggerEmergencyFromVolume()
+            Toast.makeText(this, "EMERGENCIA ACTIVADA", Toast.LENGTH_SHORT).show()
+            // Limpiar el extra para no re-triggear
+            intent.removeExtra("TRIGGER_EMERGENCY")
         }
     }
 
@@ -245,11 +300,32 @@ class MainActivity : ComponentActivity() {
 // ✅ REEMPLAZAR SafeZoneApp() COMPLETO EN MainActivity.kt
 
 @Composable
-fun SafeZoneApp() {
+fun SafeZoneApp(viewModel: EmergencyViewModel) {
 
     var currentScreen by remember { mutableStateOf("splash") }
 
-    val viewModel: EmergencyViewModel = viewModel()
+    // Observar trigger de emergencia por botón de volumen (desde ViewModel)
+    val volumeTriggered by viewModel.volumeEmergencyTriggered.collectAsState()
+
+    // Observar trigger de emergencia desde el servicio de background
+    val serviceTriggered by VolumeEmergencyService.emergencyTriggered.collectAsState()
+
+    LaunchedEffect(volumeTriggered) {
+        if (volumeTriggered) {
+            currentScreen = "emergency"
+            viewModel.clearVolumeEmergencyTrigger()
+        }
+    }
+
+    LaunchedEffect(serviceTriggered) {
+        if (serviceTriggered) {
+            if (!viewModel.isEmergencyActive.value) {
+                viewModel.activateEmergency()
+            }
+            currentScreen = "emergency"
+            VolumeEmergencyService.clearTrigger()
+        }
+    }
 
     when (currentScreen) {
 

@@ -379,15 +379,12 @@ fun StopAudioButtonEmergencyStyle(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF7A8B50) // mismo verde oliva
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp
-        )
-    ) {
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .height(56.dp)  // Reducido
+            .shadow(8.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
+    )  {
         Icon(
             imageVector = Icons.Default.MicOff,
             contentDescription = null,

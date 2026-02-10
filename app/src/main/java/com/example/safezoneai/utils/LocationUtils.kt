@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.os.Looper
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
@@ -34,6 +35,15 @@ class LocationUtils(private val context: Context) {
                     context,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Verifica si el GPS está activado en el dispositivo.
+     */
+    fun isGpsEnabled(): Boolean {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     /**

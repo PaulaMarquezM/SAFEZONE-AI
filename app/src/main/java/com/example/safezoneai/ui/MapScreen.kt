@@ -45,11 +45,12 @@ fun MapScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val dangerousZones = remember { viewModel.getAllDangerousZones() }
     val currentLocation by viewModel.currentLocation.collectAsState()
     val currentDangerZone by viewModel.currentDangerZone.collectAsState()
     val detectedCity by viewModel.detectedCity.collectAsState()
     val isLoadingZones by viewModel.isLoadingZones.collectAsState()
+    val locationError by viewModel.locationError.collectAsState()
+    val dangerousZones = detectedCity?.dangerousZones ?: emptyList()
 
     // 📱 Estados
     var showMapView by remember { mutableStateOf(true) }
@@ -116,7 +117,7 @@ fun MapScreen(
             if (isLoadingZones) {
                 LoadingView()
             } else if (dangerousZones.isEmpty()) {
-                EmptyZonesView()
+                EmptyZonesView(locationError = locationError)
             } else {
                 if (showMapView) {
                     // 🗺️ VISTA DE MAPA
@@ -766,7 +767,7 @@ fun LoadingView() {
 }
 
 @Composable
-fun EmptyZonesView() {
+fun EmptyZonesView(locationError: String? = null) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -793,7 +794,7 @@ fun EmptyZonesView() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Verifica que el GPS esté activado",
+                locationError ?: "Tu ciudad podría no estar en nuestra base de datos aún",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center
