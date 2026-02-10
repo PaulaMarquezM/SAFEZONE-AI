@@ -17,7 +17,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.safezoneai.service.LocationTrackingService
 import com.example.safezoneai.ui.theme.*
 import com.example.safezoneai.viewmodel.SettingsViewModel
 
@@ -34,8 +36,10 @@ fun SettingsScreen(
     val soundEnabled by viewModel.soundEnabled.collectAsState()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsState()
     val autoRecordEnabled by viewModel.autoRecordEnabled.collectAsState()
+    val backgroundTrackingEnabled by viewModel.backgroundTrackingEnabled.collectAsState()
     val gpsInterval by viewModel.gpsInterval.collectAsState()
     val recordingDuration by viewModel.recordingDuration.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -145,6 +149,27 @@ fun SettingsScreen(
                         value = gpsInterval.toFloat(),
                         valueRange = 5f..60f,
                         onValueChange = { viewModel.setGpsInterval(it.toInt()) }
+                    )
+                }
+
+                // SECCIÓN: MONITOREO EN SEGUNDO PLANO
+                SettingsSection(
+                    title = "🔄 Monitoreo en segundo plano",
+                    icon = Icons.Default.MyLocation
+                ) {
+                    SettingsSwitchItem(
+                        icon = Icons.Default.GpsFixed,
+                        title = "Monitoreo en background",
+                        description = "Detectar zonas peligrosas con la app cerrada",
+                        checked = backgroundTrackingEnabled,
+                        onCheckedChange = { enabled ->
+                            viewModel.setBackgroundTrackingEnabled(enabled)
+                            if (enabled) {
+                                LocationTrackingService.start(context)
+                            } else {
+                                LocationTrackingService.stop(context)
+                            }
+                        }
                     )
                 }
 

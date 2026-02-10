@@ -1,6 +1,7 @@
 package com.example.safezoneai
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.safezoneai.service.LocationTrackingService
 import com.example.safezoneai.ui.AnimatedSplashScreen
 import com.example.safezoneai.ui.ContactsScreen
 import com.example.safezoneai.ui.EmergencyScreen
@@ -72,6 +74,20 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+
+        // Después de los permisos base, solicitar background location si aplica
+        requestBackgroundLocationIfNeeded()
+    }
+
+    /**
+     * Launcher separado para ACCESS_BACKGROUND_LOCATION (Android requiere pedirlo aparte)
+     */
+    private val backgroundLocationLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startTrackingServiceIfEnabled()
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -82,10 +98,8 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Solicitar permisos necesarios
         checkAndRequestPermissions()
 
-        // Configurar interfaz con Jetpack Compose
         setContent {
             SafeZoneAITheme {
                 Surface(
@@ -139,6 +153,47 @@ class MainActivity : ComponentActivity() {
         // Solicitar solo los permisos necesarios
         if (permissionsToRequest.isNotEmpty()) {
             permissionLauncher.launch(permissionsToRequest.toTypedArray())
+        }
+    }
+
+    /**
+     * Solicita ACCESS_BACKGROUND_LOCATION si el usuario tiene monitoreo activado.
+     * Android requiere que se pida por separado de los permisos normales.
+     */
+    private fun requestBackgroundLocationIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+
+        val prefs = getSharedPreferences("safezone_settings", Context.MODE_PRIVATE)
+        val trackingEnabled = prefs.getBoolean("background_tracking_enabled", false)
+        if (!trackingEnabled) return
+
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasBackgroundLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFineLocation && !hasBackgroundLocation) {
+            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
+    }
+
+    /**
+     * Arranca el servicio de monitoreo si está habilitado en settings y tiene permisos.
+     */
+    private fun startTrackingServiceIfEnabled() {
+        val prefs = getSharedPreferences("safezone_settings", Context.MODE_PRIVATE)
+        val trackingEnabled = prefs.getBoolean("background_tracking_enabled", false)
+        if (!trackingEnabled) return
+
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFineLocation) {
+            LocationTrackingService.start(this)
         }
     }
 

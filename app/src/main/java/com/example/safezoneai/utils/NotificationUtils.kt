@@ -1,6 +1,7 @@
 package com.example.safezoneai.utils
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -31,8 +32,10 @@ class NotificationUtils(private val context: Context) {
     companion object {
         private const val CHANNEL_ID_EMERGENCY = "emergency_channel"
         private const val CHANNEL_ID_ZONE_ALERT = "zone_alert_channel"
+        const val CHANNEL_ID_TRACKING = "tracking_service_channel"
         private const val NOTIFICATION_ID_EMERGENCY = 1001
         private const val NOTIFICATION_ID_ZONE = 1002
+        const val NOTIFICATION_ID_TRACKING = 1003
     }
 
     init {
@@ -65,8 +68,19 @@ class NotificationUtils(private val context: Context) {
                 enableVibration(true)
             }
 
+            // Canal para servicio de monitoreo en background (sin sonido)
+            val trackingChannel = NotificationChannel(
+                CHANNEL_ID_TRACKING,
+                "Monitoreo de ubicación",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Notificación persistente del monitoreo en segundo plano"
+                setShowBadge(false)
+            }
+
             notificationManager.createNotificationChannel(emergencyChannel)
             notificationManager.createNotificationChannel(zoneChannel)
+            notificationManager.createNotificationChannel(trackingChannel)
         }
     }
 
@@ -164,12 +178,9 @@ class NotificationUtils(private val context: Context) {
 
             contacts.forEach { contact ->
                 try {
-                    smsManager.sendTextMessage(
-                        contact.phoneNumber,
-                        null,
-                        message,
-                        null,
-                        null
+                    val parts = smsManager.divideMessage(message)
+                    smsManager.sendMultipartTextMessage(
+                        contact.phoneNumber, null, parts, null, null
                     )
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -203,6 +214,37 @@ class NotificationUtils(private val context: Context) {
             
             Por favor, verifica mi seguridad.
         """.trimIndent()
+    }
+
+    /**
+     * Construye la notificación persistente del servicio de monitoreo.
+     */
+    fun buildTrackingNotification(contentText: String = "Monitoreando tu ubicación"): Notification {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(context, CHANNEL_ID_TRACKING)
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentTitle("SafeZone AI - Monitoreo activo")
+            .setContentText(contentText)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(pendingIntent)
+            .build()
+    }
+
+    /**
+     * Actualiza la notificación persistente del servicio de monitoreo.
+     */
+    fun updateTrackingNotification(contentText: String) {
+        val notification = buildTrackingNotification(contentText)
+        notificationManager.notify(NOTIFICATION_ID_TRACKING, notification)
     }
 
     /**

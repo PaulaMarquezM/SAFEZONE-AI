@@ -34,6 +34,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     )
     val autoRecordEnabled: StateFlow<Boolean> = _autoRecordEnabled.asStateFlow()
 
+    private val _backgroundTrackingEnabled = MutableStateFlow(
+        prefs.getBoolean("background_tracking_enabled", false)
+    )
+    val backgroundTrackingEnabled: StateFlow<Boolean> = _backgroundTrackingEnabled.asStateFlow()
+
     private val _gpsInterval = MutableStateFlow(
         prefs.getInt("gps_interval", 5)
     )
@@ -63,6 +68,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("auto_record_enabled", enabled).apply()
     }
 
+    fun setBackgroundTrackingEnabled(enabled: Boolean) {
+        _backgroundTrackingEnabled.value = enabled
+        prefs.edit().putBoolean("background_tracking_enabled", enabled).apply()
+    }
+
     fun setGpsInterval(interval: Int) {
         _gpsInterval.value = interval
         prefs.edit().putInt("gps_interval", interval).apply()
@@ -80,6 +90,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         setSoundEnabled(true)
         setVibrationEnabled(true)
         setAutoRecordEnabled(true)
+        setBackgroundTrackingEnabled(false)
         setGpsInterval(5)
         setRecordingDuration(60)
     }

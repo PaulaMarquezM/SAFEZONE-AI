@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.safezoneai.data.SmartZoneDetector
 import com.example.safezoneai.data.local.AppDatabase
+import com.example.safezoneai.service.LocationTrackingService
 import com.example.safezoneai.data.local.EmergencyContact
 import com.example.safezoneai.data.local.EmergencyRecord
 import com.example.safezoneai.utils.AudioRecorder
@@ -92,6 +93,7 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         startLocationTracking()
         observeLocationForSmartDetection()
+        observeServiceState()
     }
 
     // ══════════════════════════════════════════════════════════
@@ -153,6 +155,33 @@ class EmergencyViewModel(application: Application) : AndroidViewModel(applicatio
                 .collect { location ->
                     detectCityAndLoadZones(location.latitude, location.longitude)
                 }
+        }
+    }
+
+    /**
+     * Observa el estado del servicio de background para mantener la UI sincronizada.
+     */
+    private fun observeServiceState() {
+        viewModelScope.launch {
+            LocationTrackingService.isRunning.collect { running ->
+                if (running) {
+                    // Observar ubicación del servicio
+                    launch {
+                        LocationTrackingService.currentLocation
+                            .filterNotNull()
+                            .collect { location ->
+                                _currentLocation.value = location
+                            }
+                    }
+                    // Observar zona peligrosa del servicio
+                    launch {
+                        LocationTrackingService.currentDangerZone
+                            .collect { zone ->
+                                _currentDangerZone.value = zone
+                            }
+                    }
+                }
+            }
         }
     }
 

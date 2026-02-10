@@ -2,9 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 🔐 PERMISOS DE UBICACIÓN -->
+    <!-- 📍 PERMISOS DE UBICACIÓN -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- 🔄 FOREGROUND SERVICE -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!-- 🎤 PERMISO DE AUDIO -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -18,9 +23,15 @@
     <!-- 🔔 NOTIFICACIONES (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- 🌐 INTERNET (opcional pero recomendado) -->
+    <!-- 🌐 INTERNET (para OpenStreetMap) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ✅ NUEVO: Escribir almacenamiento externo (para cache de mapas) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!-- 📍 HARDWARE REQUERIDO -->
     <uses-feature
@@ -57,6 +68,12 @@
             </intent-filter>
 
         </activity>
+
+        <!-- 🔄 SERVICIO DE MONITOREO EN BACKGROUND -->
+        <service
+            android:name=".service.LocationTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- 📍 GOOGLE PLAY SERVICES -->
         <meta-data
