@@ -2,6 +2,7 @@ package com.example.safezoneai.ui
 
 import android.location.Location
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,8 @@ import com.example.safezoneai.data.SmartZoneDetector
 import com.example.safezoneai.ui.theme.*
 import com.example.safezoneai.utils.WhatsAppUtils
 import com.example.safezoneai.viewmodel.EmergencyViewModel
+import com.example.safezoneai.R
+import androidx.compose.ui.layout.ContentScale
 
 /**
  * ✨ HomeScreen MINIMALISTA - Versión limpia, profesional y 100% RESPONSIVE
@@ -53,12 +57,13 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
+                        Image(
+                            painter = painterResource(id = R.drawable.safezonelogo),
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = PureWhite
+                            modifier = Modifier.size(42.dp),
+                            contentScale = ContentScale.Fit
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
