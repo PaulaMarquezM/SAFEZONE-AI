@@ -146,12 +146,6 @@ fun HomeScreen(
                     )
                 }
 
-                // WhatsApp Button
-                WhatsAppShareButtonMinimalist(
-                    viewModel = viewModel,
-                    currentLocation = currentLocation
-                )
-
                 // Info Section
                 InfoSectionMinimalist()
 
