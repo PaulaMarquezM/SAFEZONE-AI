@@ -698,7 +698,7 @@ fun ContactFormDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.Star,
@@ -808,13 +808,7 @@ fun ContactFormDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
                     ) {
-                        Icon(
-                            Icons.Default.Check,
-                            null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Guardar")
+                        Text("Guardar", maxLines = 1, softWrap = false)
                     }
                 }
             }
