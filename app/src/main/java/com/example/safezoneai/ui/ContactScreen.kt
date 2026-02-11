@@ -335,9 +335,6 @@ fun ContactCard(
             else
                 PureWhite
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        )
     ) {
         Column(
             modifier = Modifier
@@ -399,13 +396,6 @@ fun ContactCard(
                                 contentDescription = null,
                                 tint = PureWhite,
                                 modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Principal",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PureWhite,
-                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
