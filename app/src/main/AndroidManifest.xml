@@ -24,6 +24,9 @@
     <!-- 🔔 NOTIFICACIONES (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 🔔 FULL SCREEN INTENT (para abrir emergencia desde background) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
     <!-- 🌐 INTERNET (para OpenStreetMap) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -61,6 +64,8 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.SafeZoneAI"
             android:screenOrientation="portrait"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
