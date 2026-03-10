@@ -457,3 +457,50 @@ if (volumeChangeTimestamps.size >= REQUIRED_PRESSES) {  // Si hay 3+ en la venta
 - No enviar SMS real (cuesta dinero)
 - No activar volumen x3 sin explicar antes que va a vibrar fuerte
 - No quedarse mucho tiempo en el mapa (puede tardar en cargar)
+Aplicamos los cinco principios SOLID: responsabilidad única mediante utilidades especializadas, abierto/cerrado con extensión de zonas y pantallas, sustitución de Liskov con herencia de ViewModels, segregación mediante DAOs específicos y callbacks pequeños, e inversión de dependencias usando StateFlow, Flow y utilidades como abstracciones.
+📦 3. Repository
+👉 Abstraer el origen de datos.
+En tu caso:
+DAOs funcionan como repositorios
+SmartZoneDetector como repositorio de zonas
+el ViewModel no sabe si los datos vienen de SQL o memoria
+💬 Qué decir:
+“El ViewModel accede a datos mediante DAOs y detectores sin conocer detalles de almacenamiento.”
+4. Strategy
+👉 Cambiar comportamiento según el contexto.
+Ejemplo fuerte:
+SmartZoneDetector:
+when(city){
+   "cuenca" -> getCuencaZones()
+   "quito" -> getQuitoZones()
+}
+💬 Qué decir:
+“Se selecciona una estrategia diferente de zonas según la ciudad detectada.”
+State
+👉 El comportamiento depende del estado actual.
+Ejemplo:
+navegación con currentScreen
+when(currentScreen){
+   "home" -> HomeScreen()
+   "map" -> MapScreen()
+}
+💬 Qué decir:
+“La pantalla mostrada depende del estado de navegación activo.”
+Front Controller
+Consiste en tener un punto central que controla las solicitudes del sistema
+👉 Un punto central que controla todo.
+Ejemplo:
+MainActivity
+Controla:
+navegación
+permisos
+lifecycle
+eventos de volumen
+💬 Qué decir:
+“MainActivity centraliza la entrada y coordinación principal del sistema.”
+🔗 7. Callback
+👉 Comunicación mediante funciones lambda.
+Ejemplo:
+onNavigateToMap = { currentScreen = "map" }
+💬 Qué decir:
+“Las pantallas usan callbacks para comunicarse sin depender directamente de otras clases.”

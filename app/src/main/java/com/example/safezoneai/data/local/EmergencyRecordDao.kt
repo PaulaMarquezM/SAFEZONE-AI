@@ -4,7 +4,7 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 📊 DAO para historial de emergencias
+ *  DAO para historial de emergencias
  */
 @Dao
 interface EmergencyRecordDao {

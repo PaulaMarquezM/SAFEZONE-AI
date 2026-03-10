@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
  * Base de datos Room de la aplicación (Singleton).
  * Gestiona la persistencia local de datos.
  *
- * ✅ ACTUALIZADO: Ahora incluye EmergencyRecord
+ * ACTUALIZADO: Ahora incluye EmergencyRecord
  */
 @Database(
     entities = [

@@ -30,11 +30,6 @@ import com.example.safezoneai.viewmodel.EmergencyViewModel
 import com.example.safezoneai.R
 import androidx.compose.ui.layout.ContentScale
 
-/**
- * ✨ HomeScreen MINIMALISTA - Versión limpia, profesional y 100% RESPONSIVE
- * ✅ Optimizado para pantallas pequeñas y grandes
- * ✅ Scroll vertical completo
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
